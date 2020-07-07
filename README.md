@@ -1,6 +1,7 @@
 # Bazel Extension for Haxe
 
-Contains Bazel rules for building and testing Haxe projects.
+Contains Bazel rules for building and testing Haxe projects.  This project is very much in progress and there's a good
+chance it won't work.
 
 Based on the simple Go example [here](https://github.com/jayconrod/rules_go_simple).
 
