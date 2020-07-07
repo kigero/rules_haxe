@@ -1,0 +1,12 @@
+{
+    "lineEnds": {
+        "leftCurly": "both",
+        "emptyCurly": "break"
+    },
+    "sameLine": {
+        "ifElse": "next"
+    },
+    "indentation": {
+        "conditionalPolicy": "fixedZero"
+    }
+}
