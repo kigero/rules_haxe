@@ -11,9 +11,12 @@ Currently supports the neko and java targets.
 In your WORKSPACE file, first specify the Haxe distribution to install with either `haxe_download_windows_amd64` or a
 specific version with `haxe_download`.  Next register the toolchain.  So a minimal WORKSPACE file would look like this:
 ```
-local_repository(
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+
+git_repository(
     name = "rules_haxe",
-    path = "<local_path>",
+    branch = "master",
+    remote = "https://github.com/kigero/rules_haxe",
 )
 
 load("@rules_haxe//:def.bzl", "haxe_download_windows_amd64")
@@ -26,8 +29,6 @@ register_toolchains(
     "@haxe_windows_amd64//:toolchain",
 )
 ```
-Only use the `local_repository` statement if you are developing on the Haxe rules locally; otherwise the remote repository
-should be used.
 
 Next, in the BUILD file you want to use the `haxe_library` and `haxe_test` rules to build libraries and test your code respectively.
 
