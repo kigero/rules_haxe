@@ -14,5 +14,6 @@ HaxeLibraryInfo = provider(
         "deps": """
         A depset of info structs for this library's dependencies.
         """,
+        "hxml": "HXML file from the previous build.",
     },
 )

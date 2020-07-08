@@ -47,6 +47,14 @@ def _create_hxml_map(ctx, for_test = False):
             for f in d.files.to_list():
                 hxml["source_files"].append(f.path)
 
+    # Handle Dependencies
+    for dep in ctx.attr.deps:
+        dep_hxml = dep[HaxeLibraryInfo].hxml
+        if dep_hxml == None:
+            continue
+        for classpath in dep_hxml["classpaths"]:
+            hxml["classpaths"].append("external/{}/{}".format(dep_hxml["name"], classpath))
+
     return hxml
 
 def _create_build_hxml(ctx, toolchain, hxml, out_file):
@@ -61,14 +69,18 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
         hxml: A dict containing HXML parameters; should be generated from `_create_hxml_map`.
         out_file: The output file that the build.hxml should be written to.
     """
+    is_dependent_build = hxml["source_files"][0].startswith("external")
+
+    source_root = "external/{}/".format(hxml["name"]) if is_dependent_build else ""
+
     content = ""
 
     # Target
     if hxml["target"] == "neko":
-        content += "--neko {}/neko/{}.n\n".format(ctx.var["BINDIR"], hxml["name"])
+        content += "--neko {}/{}neko/{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["name"])
         hxml["output"] = "neko/{}.n".format(hxml["name"])
     elif hxml["target"] == "java":
-        content += "--java {}/java/{}\n".format(ctx.var["BINDIR"], hxml["name"])
+        content += "--java {}/{}java/{}\n".format(ctx.var["BINDIR"], source_root, hxml["name"])
 
         output = "java/{}".format(hxml["name"])
         if hxml["main_class"] != None:
@@ -94,15 +106,20 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
 
     # Classpaths
     for classpath in hxml["classpaths"]:
-        content += "-p {}\n".format(classpath)
+        content += "-p {}{}\n".format(source_root, classpath)
 
     # Source or Main files
     if hxml["main_class"] != None:
         content += "-m {}\n".format(hxml["main_class"])
     else:
         for path in hxml["source_files"]:
-            content += path.replace("src/main/haxe/", "").replace(".hx", "").replace("/", ".")
-            content += "\n"
+            if is_dependent_build:
+                path = path[len(source_root):]
+            for classpath in hxml["classpaths"]:
+                if path.startswith(classpath):
+                    path = path[len(classpath) + 1:]
+                    break
+            content += path.replace(".hx", "").replace("/", ".") + "\n"
 
     count = 1
     build_files = list()
@@ -154,6 +171,8 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
         command = command,
     )
 
+###############################################################################
+
 def _haxe_library_impl(ctx):
     """
     haxe_library implementation.
@@ -168,10 +187,15 @@ def _haxe_library_impl(ctx):
     _create_build_hxml(ctx, toolchain, hxml, build_file)
     lib = ctx.actions.declare_file(hxml["output"])
 
+    runfiles = []
+    for i, d in enumerate(ctx.attr.srcs):
+        for f in d.files.to_list():
+            runfiles.append(f)
+
     toolchain.compile(
         ctx,
         hxml = build_file,
-        # importpath = ctx.attr.importpath,
+        runfiles = runfiles,
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
         out = lib,
     )
@@ -179,18 +203,54 @@ def _haxe_library_impl(ctx):
     return [
         DefaultInfo(
             files = depset([lib]),
-            runfiles = ctx.runfiles(collect_data = True),
+            runfiles = ctx.runfiles(files = runfiles),
         ),
         HaxeLibraryInfo(
             info = struct(
                 lib = lib,
             ),
+            hxml = hxml,
             deps = depset(
                 direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
             ),
         ),
     ]
+
+haxe_library = rule(
+    doc = "Create a library.",
+    implementation = _haxe_library_impl,
+    toolchains = ["@rules_haxe//:toolchain_type"],
+    attrs = {
+        "library_name": attr.string(
+            doc = "The name of the library to create; if not provided the rule name will be used.",
+        ),
+        "srcs": attr.label_list(
+            mandatory = True,
+            allow_files = True,
+            doc = "Haxe source code.",
+        ),
+        "target": attr.string(
+            default = "neko",
+            doc = "Target platform.",
+        ),
+        "haxelibs": attr.string_list(
+            doc = "A list of haxelibs that the library depends on.",
+        ),
+        "debug": attr.bool(
+            doc = "If True, will compile the library with debug flags on.",
+        ),
+        "classpaths": attr.string_list(
+            doc = "Any extra classpaths to add to the build file.",
+        ),
+        "deps": attr.label_list(
+            providers = [HaxeLibraryInfo],
+            doc = "Direct dependencies of the library.",
+        ),
+    },
+)
+
+###############################################################################
 
 def _haxelib_install_impl(ctx):
     """
@@ -225,6 +285,24 @@ def _haxelib_install_impl(ctx):
             ),
         ),
     ]
+
+haxelib_install = rule(
+    doc = "Install a haxelib.",
+    implementation = _haxelib_install_impl,
+    toolchains = ["@rules_haxe//:toolchain_type"],
+    attrs = {
+        "haxelib": attr.string(
+            mandatory = True,
+            doc = "The haxelib to install.",
+        ),
+        "deps": attr.label_list(
+            providers = [HaxeLibraryInfo],
+            doc = "Direct dependencies of the library",
+        ),
+    },
+)
+
+###############################################################################
 
 def _haxe_test_impl(ctx):
     """
@@ -279,39 +357,6 @@ def _haxe_test_impl(ctx):
         ),
     ]
 
-haxe_library = rule(
-    doc = "Create a library.",
-    implementation = _haxe_library_impl,
-    toolchains = ["@rules_haxe//:toolchain_type"],
-    attrs = {
-        "library_name": attr.string(
-            doc = "The name of the library to create; if not provided the rule name will be used.",
-        ),
-        "srcs": attr.label_list(
-            mandatory = True,
-            allow_files = True,
-            doc = "Haxe source code.",
-        ),
-        "target": attr.string(
-            default = "neko",
-            doc = "Target platform.",
-        ),
-        "haxelibs": attr.string_list(
-            doc = "A list of haxelibs that the library depends on.",
-        ),
-        "debug": attr.bool(
-            doc = "If True, will compile the library with debug flags on.",
-        ),
-        "classpaths": attr.string_list(
-            doc = "Any extra classpaths to add to the build file.",
-        ),
-        "deps": attr.label_list(
-            providers = [HaxeLibraryInfo],
-            doc = "Direct dependencies of the library.",
-        ),
-    },
-)
-
 haxe_test = rule(
     doc = "Compile with Haxe and run unit tests.",
     implementation = _haxe_test_impl,
@@ -332,22 +377,6 @@ haxe_test = rule(
         ),
         "classpaths": attr.string_list(
             doc = "Any extra classpaths to add to the build file.",
-        ),
-        "deps": attr.label_list(
-            providers = [HaxeLibraryInfo],
-            doc = "Direct dependencies of the library",
-        ),
-    },
-)
-
-haxelib_install = rule(
-    doc = "Install a haxelib.",
-    implementation = _haxelib_install_impl,
-    toolchains = ["@rules_haxe//:toolchain_type"],
-    attrs = {
-        "haxelib": attr.string(
-            mandatory = True,
-            doc = "The haxelib to install.",
         ),
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo],

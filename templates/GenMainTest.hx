@@ -157,6 +157,6 @@ class GenMainTest
 		Sys.println("\t\tif(r.result.toString().indexOf(\"FAILED\") >= 0)\n\t\t{");
 		// Sys.println("\t\t\tSys.println(r.result.toString());");
 		Sys.println("\t\t\tthrow \"Test failure.\";");
-		Sys.println("\t\t}\t}\n}\n");
+		Sys.println("\t\t}\n\t}\n}\n");
 	}
 }
