@@ -2,6 +2,14 @@
 
 load(":providers.bzl", "HaxeLibraryInfo")
 
+def _determine_source_root(path):
+    source_root = ""
+    parts = path.split("/")
+    for idx in range(len(parts)):
+        if parts[idx] == "external":
+            source_root += "external/{}/".format(parts[idx + 1])
+    return source_root
+
 def _create_hxml_map(ctx, for_test = False):
     """
     Create a dict containing haxe build parameters based on the input attributes from the calling rule.
@@ -39,9 +47,9 @@ def _create_hxml_map(ctx, for_test = False):
                 hxml["libs"].append(lib)
 
     hxml["classpaths"] = list()
-    hxml["classpaths"].append(ctx.var["BINDIR"])
     hxml["classpaths"].append("src/main/haxe")
     if for_test:
+        hxml["classpaths"].append(ctx.var["BINDIR"])
         hxml["classpaths"].append("src/test/haxe")
     if hasattr(ctx.attr, "classpaths"):
         for p in ctx.attr.classpaths:
@@ -59,7 +67,10 @@ def _create_hxml_map(ctx, for_test = False):
         if dep_hxml == None:
             continue
         for classpath in dep_hxml["classpaths"]:
-            hxml["classpaths"].append("external/{}/{}".format(dep_hxml["name"], classpath))
+            hxml["classpaths"].append("{}{}".format(_determine_source_root(dep_hxml["source_files"][0]), classpath))
+        for lib in dep_hxml["libs"]:
+            if not lib in hxml["libs"]:
+                hxml["libs"].append(lib)
 
     return hxml
 
@@ -75,9 +86,13 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
         hxml: A dict containing HXML parameters; should be generated from `_create_hxml_map`.
         out_file: The output file that the build.hxml should be written to.
     """
-    is_dependent_build = hxml["source_files"][0].startswith("external")
 
-    source_root = "external/{}/".format(hxml["name"]) if is_dependent_build else ""
+    # Determine if we're in a dependant build, and if so what the correct source root is.
+    # This is fairly toxic.
+    is_dependent_build = hxml["source_files"][0].startswith("external")
+    source_root = _determine_source_root(hxml["source_files"][0])
+
+    # source_root = "external/{}/".format(hxml["name"]) if is_dependent_build else ""
 
     content = ""
 
@@ -112,7 +127,9 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
 
     # Classpaths
     for classpath in hxml["classpaths"]:
-        content += "-p {}{}\n".format(source_root, classpath)
+        if not classpath.startswith("external"):
+            classpath = "{}{}".format(source_root, classpath)
+        content += "-p {}\n".format(classpath)
 
     # Source or Main files
     if hxml["main_class"] != None:

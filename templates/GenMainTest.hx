@@ -149,7 +149,10 @@ class GenMainTest
 			{
 				for (cls in lst)
 				{
-					Sys.println('\t\tr.add(new $cls());');
+					if (cls.endsWith("Test"))
+					{
+						Sys.println('\t\tr.add(new $cls());');
+					}
 				}
 			}
 		}
