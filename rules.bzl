@@ -30,7 +30,13 @@ def _create_hxml_map(ctx, for_test = False):
         hxml["libs"].append("hxjava")
     if hasattr(ctx.attr, "haxelibs"):
         for lib in ctx.attr.haxelibs:
-            hxml["libs"].append(lib)
+            version = ctx.attr.haxelibs[lib]
+            if version != None and version != "":
+                if version.lower().find("http") == 0:
+                    version = "git:{}".format(version)
+                hxml["libs"].append("{}:{}".format(lib, version))
+            else:
+                hxml["libs"].append(lib)
 
     hxml["classpaths"] = list()
     hxml["classpaths"].append(ctx.var["BINDIR"])
@@ -137,10 +143,16 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
 
     for lib in hxml["libs"]:
         content += "-L {}\n".format(lib)
+        colon_idx = lib.find(":")
+        version = None
+        if colon_idx > 0:
+            version = lib[colon_idx + 1:]
+            lib = lib[:colon_idx]
         path_file = ctx.actions.declare_file("{}.{}".format(path_prefix, count))
         toolchain.haxelib_install(
             ctx,
             lib,
+            version,
             path_file,
         )
 
@@ -234,8 +246,8 @@ haxe_library = rule(
             default = "neko",
             doc = "Target platform.",
         ),
-        "haxelibs": attr.string_list(
-            doc = "A list of haxelibs that the library depends on.",
+        "haxelibs": attr.string_dict(
+            doc = "A dict of haxelib names to optional versions that the library depends on.",
         ),
         "debug": attr.bool(
             doc = "If True, will compile the library with debug flags on.",
@@ -263,10 +275,10 @@ def _haxelib_install_impl(ctx):
 
     out_file = ctx.actions.declare_file("out.txt")
 
-    toolchain.haxelib(
+    toolchain.haxelib_install(
         ctx,
         ctx.attr.haxelib,
-        "install",
+        ctx.attr.version,
         out_file,
     )
 
@@ -294,6 +306,9 @@ haxelib_install = rule(
         "haxelib": attr.string(
             mandatory = True,
             doc = "The haxelib to install.",
+        ),
+        "version": attr.string(
+            doc = "The version or git repository of the haxelib to install.",
         ),
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo],
@@ -372,8 +387,8 @@ haxe_test = rule(
             default = "neko",
             doc = "Target platform.",
         ),
-        "haxelibs": attr.string_list(
-            doc = "A list of haxelibs that the unit tests depend on.",
+        "haxelibs": attr.string_dict(
+            doc = "A dict of haxelib names to optional versions or git repositories that the unit tests depend on.",
         ),
         "classpaths": attr.string_list(
             doc = "Any extra classpaths to add to the build file.",

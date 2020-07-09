@@ -91,14 +91,13 @@ def haxe_compile(ctx, hxml, out, runfiles = None, deps = []):
         mnemonic = "HaxeCompile",
     )
 
-def _haxe_haxelib(ctx, haxelib, action, out, runfiles = None, deps = []):
+def _haxe_haxelib(ctx, cmd, out, runfiles = None, deps = []):
     """
     Perform a haxelib action on some haxelib.
     
     Args:
         ctx: Bazel context.
-        haxelib: The haxelib to perform the action on.
-        action: The action to perform.
+        cmd: The haxelib command to run.
         out: A file that captures the output of the haxelib command.
         runfiles: Any runfiles needed by the compilation.
         deps: Any deps needed by the compilation.
@@ -117,11 +116,24 @@ def _haxe_haxelib(ctx, haxelib, action, out, runfiles = None, deps = []):
         inputs = inputs,
         outputs = [out],
         toolchain = toolchain,
-        haxe_cmd = "haxelib {} {} > {}".format(action, haxelib, out.path),
+        haxe_cmd = "haxelib {} > {}".format(cmd, out.path),
         mnemonic = "Haxelib",
     )
 
-def haxe_haxelib_install(ctx, haxelib, out, deps = []):
+def haxe_haxelib_path(ctx, haxelib, out, runfiles = [], deps = []):
+    """
+    Get the path information for a haxelib.
+    
+    Args:
+        ctx: Bazel context.
+        haxelib: The haxelib to install.
+        out: A file that captures the "path" information of the haxelib command.
+        runfiles: Any runfiles needed by the compilation.
+        deps: Any deps needed by the compilation.
+    """
+    _haxe_haxelib(ctx, "path {}".format(haxelib), out, runfiles, deps)
+
+def haxe_haxelib_install(ctx, haxelib, version, out, runfiles = [], deps = []):
     """
     Install a haxelib.  
     
@@ -131,12 +143,22 @@ def haxe_haxelib_install(ctx, haxelib, out, deps = []):
     Args:
         ctx: Bazel context.
         haxelib: The haxelib to install.
+        version: The version of the haxelib to perform the action on; specify "git:<repo_url>" to use a git repository.
         out: A file that captures the "path" information of the haxelib command.
+        runfiles: Any runfiles needed by the compilation.
         deps: Any deps needed by the compilation.
     """
     install_out = ctx.actions.declare_file("haxelib_install_out-{}".format(haxelib))
-    _haxe_haxelib(ctx, haxelib, "install", install_out, deps)
-    _haxe_haxelib(ctx, haxelib, "path", out, [install_out], deps)
+    if version != None and version != "":
+        if version.startswith("git:"):
+            cmd = "git {} {}".format(haxelib, version[4:])
+        else:
+            cmd = "install {} {}".format(haxelib, version)
+    else:
+        cmd = "install {}".format(haxelib)
+
+    _haxe_haxelib(ctx, cmd, install_out, runfiles, deps)
+    haxe_haxelib_path(ctx, haxelib, out, runfiles + [install_out], deps)
 
 def haxe_create_test_class(ctx, srcs, out):
     """
