@@ -172,32 +172,19 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
             version,
             path_file,
         )
-
-        lib_file = ctx.actions.declare_file("{}.{}".format(build_prefix, count))
         count += 1
-        ctx.actions.run_shell(
-            inputs = [path_file],
-            outputs = [lib_file],
-            command = "sed '/^-/! s/^/-p /' {} > {}".format(path_file.path, lib_file.path),
-        )
-        build_files.append(lib_file)
+        build_files.append(path_file)
 
+    # Write to a temporary file, then use run_shell to generate the required output file so that all the previous tasks are complete.
     ctx.actions.write(
         output = build_file_1,
         content = content,
     )
 
-    command = "cat "
-    for build_file in build_files:
-        command += build_file.path
-        command += " "
-    command += "> "
-    command += out_file.path
-
     ctx.actions.run_shell(
         outputs = [out_file],
         inputs = build_files,
-        command = command,
+        command = "mv {} {}".format(build_file_1.path, out_file.path),
     )
 
 ###############################################################################
