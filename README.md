@@ -65,3 +65,11 @@ startup --windows_enable_symlinks
 build --enable_runfiles --action_env=ComSpec --action_env=USERPROFILE
 test --action_env=ComSpec --action_env=USERPROFILE
 ```
+
+# Known Issues
+
+* On windows (maybe other platforms, haven't tested it) running multiple builds at the same time can lead to an "Access
+  is denied" error.  As best as I can tell, this happens when a haxelib is being installed for one build while another
+  build attempts to use any haxelib in a compile, but the error is coming from the haxe compilation and gives no
+  indication as to the underlying issue.  Typically this only happens the first time after a clean; running the same
+  command again will complete OK.   
