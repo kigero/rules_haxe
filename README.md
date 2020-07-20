@@ -7,6 +7,11 @@ Based on the simple Go example [here](https://github.com/jayconrod/rules_go_simp
 
 Currently supports the neko and java targets.
 
+On Windows, CYGWIN is required!  This is due to the use of `run_shell`, which calls a bash environment.  At this point
+there isn't a better way to set the environment needed for Haxe to run properly.  
+
+The haxelib directory is in the same directory as the downloaded Haxe distribution; this allows haxelibs to be reused across builds within the same project.
+
 # Usage
 
 In your WORKSPACE file, first specify the Haxe distribution to install with either `haxe_download_windows_amd64` or a

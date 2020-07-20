@@ -53,6 +53,14 @@ def _haxe_download_impl(ctx):
         ctx.attr._gen_main_test_tpl,
     )
 
+    ctx.execute(
+        ["mkdir", "-p", "haxelib_dir"],
+    )
+
+    ctx.execute(
+        ["touch", "haxelib_dir/haxelib_file"],
+    )
+
 haxe_download = repository_rule(
     doc = "Downloads Haxe and Neko and sets up the repository.",
     implementation = _haxe_download_impl,

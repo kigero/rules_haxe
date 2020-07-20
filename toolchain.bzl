@@ -16,40 +16,28 @@ def _run_haxe(ctx, inputs, outputs, toolchain, haxe_cmd, mnemonic = None):
         haxe_cmd: The actual haxe command to run; may be a haxe or haxelib command, e.g. `haxe build.hxml` or `haxelib install hx3compat`.
         mnemonic: The mnemonic to pass to run_shell.
     """
-
-    # On Windows, haxelib cannot be a symlink or the shell spawned by the haxe command won't be able to run it.  Since
-    # the tools directories are symlinked in, haxe can't run haxelib even though it's on the path.  Copy it to the local
-    # directory if it doesn't already exist.
-    haxelib_exe_out = ctx.actions.declare_file("haxelib_exe_out")
-    ctx.actions.run_shell(
-        outputs = [haxelib_exe_out],
-        command = "rsync -q {} . > {}".format(toolchain.internal.haxelib_cmd.path, haxelib_exe_out.path),
-        use_default_shell_env = True,
-    )
-
-    # Create a new haxelib repo in the execroot.  This is needed to get the haxelib shell used by the haxe command to be
-    # able to access the haxelib repo, but unfortunately means a) every time the project is cleaned the libs will get
-    # removed and must be redownloaded, and b) every project will have its own cache of the haxelibs for that project.
-    haxelib_out = ctx.actions.declare_file("haxelib_repo")
-    ctx.actions.run_shell(
-        outputs = [haxelib_out],
-        command = "haxelib newrepo > {}".format(haxelib_out.path),
-        use_default_shell_env = True,
-    )
+    path = ""
+    path += "`pwd`/{}:".format(toolchain.internal.haxe_cmd.dirname)
+    path += "`pwd`/{}:".format(toolchain.internal.neko_cmd.dirname)
+    path += "$PATH"
 
     # Set up the PATH to include the toolchain directories.
-    command = " export PATH={}:$PATH".format(toolchain.internal.env["PATH"])
+    command = " export PATH={}".format(path)
 
     # Set the absolute path to the local haxelib repo.
-    command += " && export HAXELIB_REPO=`pwd`/.haxelib"
+    command += " && export HAXELIB_PATH=`pwd`/{}".format(toolchain.internal.env["HAXELIB_PATH"])
 
-    # Add the haxe command.
-    command += " && {}".format(haxe_cmd)
+    # If on windows, the HAXELIB_PATH needs to be a windows path.
+    if ctx.var["TARGET_CPU"].upper().index("WINDOWS") >= 0:
+        command += " && export HAXELIB_PATH=`cygpath -w $HAXELIB_PATH`"
+
+    # Add the haxe command.  Redirecting stdout to /dev/null seems OK - warnings and errors still show up on the screen.
+    command += " && {} > /dev/null".format(haxe_cmd)
 
     # Finally run the command.
     ctx.actions.run_shell(
         outputs = outputs,
-        inputs = inputs + [haxelib_exe_out, haxelib_out],
+        inputs = inputs,
         command = command,
         use_default_shell_env = True,
         mnemonic = mnemonic,

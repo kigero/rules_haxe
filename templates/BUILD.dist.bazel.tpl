@@ -3,21 +3,14 @@ load("@rules_haxe//:def.bzl", "haxe_toolchain")
 # Get the executables tools.
 filegroup(
     name = "tools",
-    srcs = glob(["**/haxe{exe}", "**/haxelib{exe}", "**/neko{exe}", "**/GenMainTest.hx", "**/neko-*/*"]),
+    srcs = glob(["**/haxe{exe}", "**/haxelib{exe}", "**/neko{exe}", "**/GenMainTest.hx", "**/neko-*/*", "**/haxelib_dir/haxelib_file"]),
     visibility = ["//visibility:public"],
-)
-
-# Create a directory to store haxelibs.
-genrule(
-    name = "CreateHaxelibDirectory",
-    outs = ["haxelib/haxelib_file"],
-    cmd = "mkdir -p haxelib && touch $@",
 )
 
 # Instantiate the toolchain.
 haxe_toolchain(
     name = "toolchain_impl",
-    tools = [":tools", ":CreateHaxelibDirectory"],
+    tools = [":tools"],
 )
 
 # Define the target toolchain; this is registered by users of this repository..
