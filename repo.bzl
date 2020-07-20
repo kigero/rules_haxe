@@ -2,64 +2,69 @@
 Contains rules to instantiate the haxe repository.
 """
 
-def _haxe_download_impl(ctx):
+def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tpl, gen_main_test_tpl):
     """
     Download the haxe and neko distributions, expand them, and then set up the rest of the repository.
     """
     ctx.report_progress("Downloading Haxe distribution")
     ctx.download_and_extract(
-        ctx.attr.haxe_url,
-        sha256 = ctx.attr.haxe_sha256,
+        haxe_url,
+        sha256 = haxe_sha256,
     )
 
     ctx.report_progress("Downloading Neko distribution")
     ctx.download_and_extract(
-        ctx.attr.neko_url,
-        sha256 = ctx.attr.neko_sha256,
+        neko_url,
+        sha256 = neko_sha256,
     )
 
     ctx.report_progress("Generating repository build file")
-    if ctx.attr.os == "darwin":
+    if os == "darwin":
         os_constraint = "@platforms//os:osx"
-    elif ctx.attr.os == "linux":
+    elif os == "linux":
         os_constraint = "@platforms//os:linux"
-    elif ctx.attr.os == "windows":
+    elif os == "windows":
         os_constraint = "@platforms//os:windows"
     else:
-        fail("unsupported os: " + ctx.attr.os)
+        fail("unsupported os: " + os)
 
-    if ctx.attr.arch == "amd64":
+    if arch == "amd64":
         arch_constraint = "@platforms//cpu:x86_64"
     else:
-        fail("unsupported arch: " + ctx.attr.arch)
+        fail("unsupported arch: " + arch)
     constraints = [os_constraint, arch_constraint]
     constraint_str = ",\n        ".join(['"%s"' % c for c in constraints])
 
     substitutions = {
-        "{exe}": ".exe" if ctx.attr.os == "windows" else "",
+        "{exe}": ".exe" if os == "windows" else "",
         "{exec_constraints}": constraint_str,
         "{target_constraints}": constraint_str,
         "{haxelib_path}": "{}".format(ctx.path("haxelib")),
     }
     ctx.template(
         "BUILD.bazel",
-        ctx.attr._build_tpl,
+        build_tpl,
         substitutions = substitutions,
     )
 
     ctx.report_progress("Generating test generator")
     ctx.template(
         "GenMainTest.hx",
-        ctx.attr._gen_main_test_tpl,
+        gen_main_test_tpl,
     )
 
+    # Create the haxelib directory...
     ctx.execute(
         ["mkdir", "-p", "haxelib_dir"],
     )
 
+    # ...and a file that can be used to find it in the toolchain.
     ctx.execute(
         ["touch", "haxelib_dir/haxelib_file"],
     )
+
+def _haxe_download_impl(ctx):
+    _setup(ctx, ctx.attr.haxe_url, ctx.attr.haxe_sha256, ctx.attr.neko_url, ctx.attr.neko_sha256, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_main_test_tpl)
 
 haxe_download = repository_rule(
     doc = "Downloads Haxe and Neko and sets up the repository.",
@@ -100,26 +105,60 @@ haxe_download = repository_rule(
     },
 )
 
+def _haxe_download_version(ctx):
+    data = {
+        "windows": {
+            "amd64": {
+                "haxe": {
+                    "4.1.2": {
+                        "url": "https://build.haxe.org/builds/haxe/windows64/haxe_2020-06-30_development_8ef3be1.zip",
+                        "sha256": "4180efbdd23f2a5a3b2230b8ed6edb59945ff35b71df9820176e1b3ece2cad77",
+                    },
+                },
+                "neko": {
+                    "2.3.0": {
+                        "url": "https://github.com/HaxeFoundation/neko/releases/download/v2-3-0/neko-2.3.0-win64.zip",
+                        "sha256": "d09fdf362cd2e3274f6c8528be7211663260c3a5323ce893b7637c2818995f0b",
+                    },
+                },
+            },
+        },
+    }
+
+    os_data = data[ctx.attr._os]
+    if os_data == None:
+        fail("Unsupported os '{}'; use the 'haxe_download' rule directly.".format(ctx.attr._os), "_os")
+
+    arch_data = os_data[ctx.attr._arch]
+    if arch_data == None:
+        fail("Unsupported arch '{}'; use the 'haxe_download' rule directly.".format(ctx.attr._arch), "_arch")
+
+    haxe_data = arch_data["haxe"][ctx.attr.haxe_version]
+    if haxe_data == None:
+        fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(ctx.attr.haxe_version), "haxe_version")
+
+    neko_data = arch_data["neko"][ctx.attr.neko_version]
+    if neko_data == None:
+        fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(ctx.attr.neko_version), "neko_version")
+
+    _setup(ctx, haxe_data["url"], haxe_data["sha256"], neko_data["url"], neko_data["sha256"], ctx.attr._os, ctx.attr._arch, ctx.attr._build_tpl, ctx.attr._gen_main_test_tpl)
+
 haxe_download_windows_amd64 = repository_rule(
-    doc = "Downloads Haxe 4.1.2 and Neko 2.3.0 for Windows and sets up the repository.",
-    implementation = _haxe_download_impl,
+    doc = "Downloads Haxe and Neko for Windows and sets up the repository.  Not all versions are supported; use haxe_download directly for a specific unsupported version.",
+    implementation = _haxe_download_version,
     attrs = {
-        "haxe_url": attr.string(
-            default = "https://build.haxe.org/builds/haxe/windows64/haxe_2020-06-30_development_8ef3be1.zip",
+        "haxe_version": attr.string(
+            default = "4.1.2",
+            doc = "The haxe version to get.",
         ),
-        "haxe_sha256": attr.string(
-            default = "4180efbdd23f2a5a3b2230b8ed6edb59945ff35b71df9820176e1b3ece2cad77",
+        "neko_version": attr.string(
+            default = "2.3.0",
+            doc = "The neko version to get.",
         ),
-        "neko_url": attr.string(
-            default = "https://github.com/HaxeFoundation/neko/releases/download/v2-3-0/neko-2.3.0-win64.zip",
-        ),
-        "neko_sha256": attr.string(
-            default = "d09fdf362cd2e3274f6c8528be7211663260c3a5323ce893b7637c2818995f0b",
-        ),
-        "os": attr.string(
+        "_os": attr.string(
             default = "windows",
         ),
-        "arch": attr.string(
+        "_arch": attr.string(
             default = "amd64",
         ),
         "_build_tpl": attr.label(
