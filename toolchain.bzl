@@ -160,8 +160,8 @@ def haxe_create_test_class(ctx, srcs, out):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     command = toolchain.internal.haxe_cmd.path
-    command += " -p " + toolchain.internal.gen_main_test_file.dirname
-    command += " --run GenMainTest.hx"
+    command += " -p " + toolchain.internal.utils_file.dirname
+    command += " --run Utils.hx genMainTest"
     for i, d in enumerate(srcs):
         for f in d.files.to_list():
             command += " " + f.path
@@ -170,6 +170,34 @@ def haxe_create_test_class(ctx, srcs, out):
     ctx.actions.run_shell(
         outputs = [out],
         command = command,
+    )
+
+def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include_sources = True):
+    """
+    Create the final jar file, which strips out haxe classes and adds source files.
+    
+    Args:
+        ctx: Bazel context.
+        srcs: The sources to search for unit test files.
+        intermediate: The intermediate jar file.
+        output: The final jar file.
+        strip: Strip out haxe classes.
+        include_sources: Include the Java sources in the jar.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    command = toolchain.internal.haxe_cmd.path
+    command += " -p " + toolchain.internal.utils_file.dirname
+    command += " --run Utils.hx createFinalJar {} {} {} {}".format(intermediate.path, output.path, "true" if strip else "false", "true" if include_sources else "false")
+    for i, d in enumerate(srcs):
+        for f in d.files.to_list():
+            command += " " + f.path
+
+    ctx.actions.run_shell(
+        outputs = [output],
+        inputs = [intermediate],
+        command = command,
+        use_default_shell_env = True,
     )
 
 def haxe_create_run_script(ctx, target, lib, out):
@@ -223,7 +251,7 @@ def _haxe_toolchain_impl(ctx):
     haxelib_cmd = None
     haxelib_file = None
     neko_cmd = None
-    gen_main_test_file = None
+    utils_file = None
     for f in ctx.files.tools:
         if f.path.endswith("/haxe") or f.path.endswith("/haxe.exe"):
             haxe_cmd = f
@@ -233,8 +261,8 @@ def _haxe_toolchain_impl(ctx):
             neko_cmd = f
         if f.path.endswith("/haxelib_file"):
             haxelib_file = f
-        if f.path.endswith("/GenMainTest.hx"):
-            gen_main_test_file = f
+        if f.path.endswith("/Utils.hx"):
+            utils_file = f
 
     if not haxe_cmd:
         fail("could not locate haxe command")
@@ -244,8 +272,8 @@ def _haxe_toolchain_impl(ctx):
         fail("could not locate neko command")
     if not haxelib_file:
         fail("could not locate haxelib file")
-    if not gen_main_test_file:
-        fail("could not locate GenMainTest file")
+    if not utils_file:
+        fail("could not locate Utils.hx file")
 
     env = {
         "PATH": haxe_cmd.dirname + ":" + neko_cmd.dirname,
@@ -258,13 +286,14 @@ def _haxe_toolchain_impl(ctx):
         haxelib_install = haxe_haxelib_install,
         create_test_class = haxe_create_test_class,
         create_run_script = haxe_create_run_script,
+        create_final_jar = haxe_create_final_jar,
 
         # Internal data. Contents may change without notice.
         internal = struct(
             haxe_cmd = haxe_cmd,
             haxelib_cmd = haxelib_cmd,
             neko_cmd = neko_cmd,
-            gen_main_test_file = gen_main_test_file,
+            utils_file = utils_file,
             env = env,
             tools = ctx.files.tools,
         ),

@@ -74,7 +74,7 @@ def _create_hxml_map(ctx, for_test = False):
 
     return hxml
 
-def _create_build_hxml(ctx, toolchain, hxml, out_file):
+def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
     """
     Create the build.hxml file based on the input hxml dict.
     
@@ -85,6 +85,7 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
         toolchain: The Haxe toolchain instance.
         hxml: A dict containing HXML parameters; should be generated from `_create_hxml_map`.
         out_file: The output file that the build.hxml should be written to.
+        suffix: Optional suffix to append to the build parameters.
     """
 
     # Determine if we're in a dependant build, and if so what the correct source root is.
@@ -98,26 +99,25 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
 
     # Target
     if hxml["target"] == "neko":
-        content += "--neko {}/{}neko/{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["name"])
-        hxml["output"] = "neko/{}.n".format(hxml["name"])
+        content += "--neko {}/{}neko/{}{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["name"], suffix)
+        hxml["output"] = "neko/{}{}.n".format(hxml["name"], suffix)
     elif hxml["target"] == "java":
-        content += "--java {}/{}java/{}\n".format(ctx.var["BINDIR"], source_root, hxml["name"])
+        content += "--java {}/{}java/{}{}\n".format(ctx.var["BINDIR"], source_root, hxml["name"], suffix)
 
-        output = "java/{}".format(hxml["name"])
+        output = "java/{}{}".format(hxml["name"], suffix)
         if hxml["main_class"] != None:
             mc = hxml["main_class"]
             if "." in mc:
                 mc = mc[mc.rindex(".") + 1:]
 
-            output += "/{}".format(mc)
+            output += "/{}{}".format(mc, suffix)
         else:
-            output += "/{}".format(hxml["name"])
+            output += "/{}{}".format(hxml["name"], suffix)
 
         if hxml["debug"] != None:
             output += "-Debug"
-        output += ".jar"
 
-        hxml["output"] = output
+        hxml["output"] = output + ".jar"
     else:
         fail("Invalid target '{}'".format(hxml["target"]))
 
@@ -191,18 +191,20 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file):
 
 def _haxe_library_impl(ctx):
     """
-    haxe_library implementation.
+    Creates a haxe library using the given parameters.
     
     Args:
         ctx: Bazel context.
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
+    # Build the HXML file.
     hxml = _create_hxml_map(ctx)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
-    _create_build_hxml(ctx, toolchain, hxml, build_file)
-    lib = ctx.actions.declare_file(hxml["output"])
+    _create_build_hxml(ctx, toolchain, hxml, build_file, "-intermediate")
+    intermediate = ctx.actions.declare_file(hxml["output"])
 
+    # Do the compilation.
     runfiles = []
     for i, d in enumerate(ctx.attr.srcs):
         for f in d.files.to_list():
@@ -213,17 +215,37 @@ def _haxe_library_impl(ctx):
         hxml = build_file,
         runfiles = runfiles,
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
-        out = lib,
+        out = intermediate,
     )
 
-    return [
+    # Post process the output file.
+    output = ctx.actions.declare_file(hxml["output"].replace("-intermediate", ""))
+
+    if hxml["target"] == "java":
+        toolchain.create_final_jar(
+            ctx,
+            ctx.attr.srcs,
+            intermediate,
+            output,
+            ctx.attr.strip_haxe,
+        )
+    else:
+        ctx.actions.run_shell(
+            outputs = [output],
+            inputs = [intermediate],
+            command = "cp {} {}".format(intermediate.path, output.path),
+            use_default_shell_env = True,
+        )
+
+    # Figure out the return from the rule.
+    rtrn = [
         DefaultInfo(
-            files = depset([lib]),
+            files = depset([output]),
             runfiles = ctx.runfiles(files = runfiles),
         ),
         HaxeLibraryInfo(
             info = struct(
-                lib = lib,
+                lib = output,
             ),
             hxml = hxml,
             deps = depset(
@@ -232,6 +254,16 @@ def _haxe_library_impl(ctx):
             ),
         ),
     ]
+
+    # This allows java targets to use the results of this rule.
+    if hxml["target"] == "java":
+        rtrn.append(JavaInfo(
+            output_jar = output,
+            compile_jar = output,
+            deps = [dep[JavaInfo] for dep in ctx.attr.deps],
+        ))
+
+    return rtrn
 
 haxe_library = rule(
     doc = "Create a library.",
@@ -258,6 +290,10 @@ haxe_library = rule(
         ),
         "classpaths": attr.string_list(
             doc = "Any extra classpaths to add to the build file.",
+        ),
+        "strip_haxe": attr.bool(
+            default = False,
+            doc = "Whether to strip haxe classes from the resultant library.  Supported platforms: java",
         ),
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo],
