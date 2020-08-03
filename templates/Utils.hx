@@ -123,8 +123,6 @@ class Utils
 		var out = File.write(outputPath, true);
 		var outZip = new SingleEntryZipWriter(out);
 
-		trace(toKeep);
-
 		for (entry in entries)
 		{
 			if (strip && !toKeep.contains(entry.fileName))

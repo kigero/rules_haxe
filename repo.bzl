@@ -6,17 +6,19 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
     """
     Download the haxe and neko distributions, expand them, and then set up the rest of the repository.
     """
-    ctx.report_progress("Downloading Haxe distribution")
-    ctx.download_and_extract(
-        haxe_url,
-        sha256 = haxe_sha256,
-    )
+    if haxe_url != None:
+        ctx.report_progress("Downloading Haxe distribution")
+        ctx.download_and_extract(
+            haxe_url,
+            sha256 = haxe_sha256,
+        )
 
-    ctx.report_progress("Downloading Neko distribution")
-    ctx.download_and_extract(
-        neko_url,
-        sha256 = neko_sha256,
-    )
+    if neko_url != None:
+        ctx.report_progress("Downloading Neko distribution")
+        ctx.download_and_extract(
+            neko_url,
+            sha256 = neko_sha256,
+        )
 
     ctx.report_progress("Generating repository build file")
     if os == "darwin":
@@ -202,6 +204,28 @@ haxe_download_linux_amd64 = repository_rule(
             default = "linux",
         ),
         "_arch": attr.string(
+            default = "amd64",
+        ),
+        "_build_tpl": attr.label(
+            default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
+        ),
+        "_gen_utils_tpl": attr.label(
+            default = "@rules_haxe//:templates/Utils.hx",
+        ),
+    },
+)
+
+def _haxe_no_install(ctx):
+    _setup(ctx, None, None, None, None, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl)
+
+haxe_no_install = repository_rule(
+    doc = "Use a local installation of haxe.",
+    implementation = _haxe_no_install,
+    attrs = {
+        "os": attr.string(
+            default = "linux",
+        ),
+        "arch": attr.string(
             default = "amd64",
         ),
         "_build_tpl": attr.label(

@@ -17,8 +17,10 @@ def _run_haxe(ctx, inputs, outputs, toolchain, haxe_cmd, mnemonic = None):
         mnemonic: The mnemonic to pass to run_shell.
     """
     path = ""
-    path += "`pwd`/{}:".format(toolchain.internal.haxe_cmd.dirname)
-    path += "`pwd`/{}:".format(toolchain.internal.neko_cmd.dirname)
+    if toolchain.internal.haxe_dir:
+        path += "`pwd`/{}:".format(toolchain.internal.haxe_dir)
+    if toolchain.internal.neko_dir:
+        path += "`pwd`/{}:".format(toolchain.internal.neko_cmd.dirname)
     path += "$PATH"
 
     # Set up the PATH to include the toolchain directories.
@@ -159,7 +161,11 @@ def haxe_create_test_class(ctx, srcs, out):
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    command = toolchain.internal.haxe_cmd.path
+    if toolchain.internal.haxe_dir:
+        command = toolchain.internal.haxe_dir + "/haxe"
+    else:
+        command = "haxe"
+
     command += " -p " + toolchain.internal.utils_file.dirname
     command += " --run Utils.hx genMainTest"
     for i, d in enumerate(srcs):
@@ -186,7 +192,10 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    command = toolchain.internal.haxe_cmd.path
+    if toolchain.internal.haxe_dir:
+        command = toolchain.internal.haxe_dir + "/haxe"
+    else:
+        command = "haxe"
     command += " -p " + toolchain.internal.utils_file.dirname
     command += " --run Utils.hx createFinalJar {} {} {} {}".format(intermediate.path, output.path, "true" if strip else "false", "true" if include_sources else "false")
     for i, d in enumerate(srcs):
@@ -214,24 +223,42 @@ def haxe_create_run_script(ctx, target, lib, out):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     lib_path = lib.dirname[lib.dirname.rindex("/") + 1:] + "/" + lib.basename
+    if toolchain.internal.neko_dir:
+        neko_path = toolchain.internal.neko_dir + "/neko"
+    else:
+        neko_path = "neko"
 
     script_content = ""
-    if out.path.endswith(".bat"):
+    if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
+        if toolchain.internal.haxe_dir:
+            script_content += "SET PATH={};%PATH%\n".format(toolchain.internal.haxe_dir).replace("/", "\\")
+        if toolchain.internal.neko_dir:
+            script_content += "SET PATH={};%PATH%\n".format(toolchain.internal.neko_dir).replace("/", "\\")
         for e in toolchain.internal.env:
-            if e.lower() == "path":
-                script_content += "SET PATH={};%PATH%\n".format(toolchain.internal.env[e]).replace("/", "\\")
-            else:
-                script_content += "SET {}={}\n".format(e, toolchain.internal.env[e]).replace("/", "\\")
+            script_content += "SET {}={}\n".format(e, toolchain.internal.env[e]).replace("/", "\\")
 
         if target == "neko":
-            script_content += "{} {}".format(toolchain.internal.neko_cmd.path, lib_path).replace("/", "\\")
+            script_content += "{} {}".format(neko_path, lib_path).replace("/", "\\")
         elif target == "java":
             script_content += "java -jar java/{}".format(lib_path).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
     else:
-        script_content += "{} {}".format(toolchain.internal.neko_cmd.path, lib_path)
+        if toolchain.internal.haxe_dir:
+            script_content += "set PATH={};$PATH\n".format(toolchain.internal.haxe_dir)
+        if toolchain.internal.neko_dir:
+            script_content += "set PATH={};$PATH\n".format(toolchain.internal.neko_dir)
+        for e in toolchain.internal.env:
+            script_content += "set {}={}\n".format(e, toolchain.internal.env[e])
 
+        if target == "neko":
+            script_content += "{} {}".format(neko_path, lib_path)
+        elif target == "java":
+            script_content += "java -jar java/{}".format(lib_path)
+        else:
+            fail("Invalid target {}".format(target))
+
+    print(script_content)
     ctx.actions.write(
         output = out,
         content = script_content,
@@ -248,15 +275,15 @@ def _haxe_toolchain_impl(ctx):
 
     # Find important files and paths.
     haxe_cmd = None
-    haxelib_cmd = None
     haxelib_file = None
     neko_cmd = None
     utils_file = None
+    haxe_dir = None
+    neko_dir = None
+
     for f in ctx.files.tools:
         if f.path.endswith("/haxe") or f.path.endswith("/haxe.exe"):
             haxe_cmd = f
-        if f.path.endswith("/haxelib") or f.path.endswith("/haxelib.exe"):
-            haxelib_cmd = f
         if f.path.endswith("/neko") or f.path.endswith("/neko.exe"):
             neko_cmd = f
         if f.path.endswith("/haxelib_file"):
@@ -264,19 +291,20 @@ def _haxe_toolchain_impl(ctx):
         if f.path.endswith("/Utils.hx"):
             utils_file = f
 
-    if not haxe_cmd:
-        fail("could not locate haxe command")
-    if not haxelib_cmd:
-        fail("could not locate haxelib command")
-    if not neko_cmd:
-        fail("could not locate neko command")
+    if haxe_cmd:
+        haxe_dir = haxe_cmd.path
+        # fail("could not locate haxe command")
+
+    if neko_cmd:
+        neko_dir = neko_cmd.path
+        # fail("could not locate neko command")
+
     if not haxelib_file:
         fail("could not locate haxelib file")
     if not utils_file:
         fail("could not locate Utils.hx file")
 
     env = {
-        "PATH": haxe_cmd.dirname + ":" + neko_cmd.dirname,
         "HAXELIB_PATH": haxelib_file.dirname,
     }
 
@@ -290,9 +318,8 @@ def _haxe_toolchain_impl(ctx):
 
         # Internal data. Contents may change without notice.
         internal = struct(
-            haxe_cmd = haxe_cmd,
-            haxelib_cmd = haxelib_cmd,
-            neko_cmd = neko_cmd,
+            haxe_dir = haxe_dir,
+            neko_dir = neko_dir,
             utils_file = utils_file,
             env = env,
             tools = ctx.files.tools,
