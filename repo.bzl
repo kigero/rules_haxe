@@ -123,6 +123,22 @@ def _haxe_download_version(ctx):
                 },
             },
         },
+        "linux": {
+            "amd64": {
+                "haxe": {
+                    "4.1.2": {
+                        "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.1.2/haxe-4.1.2-linux64.tar.gz",
+                        "sha256": "c82f9d72e4a2c2ae228284d55a7f1bf6c7e6410e127bf1061a0152683edd1d48",
+                    },
+                },
+                "neko": {
+                    "2.3.0": {
+                        "url": "https://github.com/HaxeFoundation/neko/releases/download/v2-3-0/neko-2.3.0-linux64.tar.gz",
+                        "sha256": "26dda28d0a51407f26218ba9c2c355c8eb23cf2b0b617274b00e4b9170fe69eb",
+                    },
+                },
+            },
+        },
     }
 
     os_data = data[ctx.attr._os]
@@ -157,6 +173,33 @@ haxe_download_windows_amd64 = repository_rule(
         ),
         "_os": attr.string(
             default = "windows",
+        ),
+        "_arch": attr.string(
+            default = "amd64",
+        ),
+        "_build_tpl": attr.label(
+            default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
+        ),
+        "_gen_utils_tpl": attr.label(
+            default = "@rules_haxe//:templates/Utils.hx",
+        ),
+    },
+)
+
+haxe_download_linux_amd64 = repository_rule(
+    doc = "Downloads Haxe and Neko for Linux and sets up the repository.  Not all versions are supported; use haxe_download directly for a specific unsupported version.",
+    implementation = _haxe_download_version,
+    attrs = {
+        "haxe_version": attr.string(
+            default = "4.1.2",
+            doc = "The haxe version to get.",
+        ),
+        "neko_version": attr.string(
+            default = "2.3.0",
+            doc = "The neko version to get.",
+        ),
+        "_os": attr.string(
+            default = "linux",
         ),
         "_arch": attr.string(
             default = "amd64",

@@ -28,7 +28,7 @@ def _run_haxe(ctx, inputs, outputs, toolchain, haxe_cmd, mnemonic = None):
     command += " && export HAXELIB_PATH=`pwd`/{}".format(toolchain.internal.env["HAXELIB_PATH"])
 
     # If on windows, the HAXELIB_PATH needs to be a windows path.
-    if ctx.var["TARGET_CPU"].upper().index("WINDOWS") >= 0:
+    if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
         command += " && export HAXELIB_PATH=`cygpath -w $HAXELIB_PATH`"
 
     # Add the haxe command.  Redirecting stdout to /dev/null seems OK - warnings and errors still show up on the screen.
