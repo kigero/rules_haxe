@@ -258,7 +258,6 @@ def haxe_create_run_script(ctx, target, lib, out):
         else:
             fail("Invalid target {}".format(target))
 
-    print(script_content)
     ctx.actions.write(
         output = out,
         content = script_content,
