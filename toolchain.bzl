@@ -20,7 +20,7 @@ def _run_haxe(ctx, inputs, outputs, toolchain, haxe_cmd, mnemonic = None):
     if toolchain.internal.haxe_dir:
         path += "`pwd`/{}:".format(toolchain.internal.haxe_dir)
     if toolchain.internal.neko_dir:
-        path += "`pwd`/{}:".format(toolchain.internal.neko_cmd.dirname)
+        path += "`pwd`/{}:".format(toolchain.internal.neko_dir)
     path += "$PATH"
 
     # Set up the PATH to include the toolchain directories.
@@ -291,11 +291,11 @@ def _haxe_toolchain_impl(ctx):
             utils_file = f
 
     if haxe_cmd:
-        haxe_dir = haxe_cmd.path
+        haxe_dir = haxe_cmd.dirname
         # fail("could not locate haxe command")
 
     if neko_cmd:
-        neko_dir = neko_cmd.path
+        neko_dir = neko_cmd.dirname
         # fail("could not locate neko command")
 
     if not haxelib_file:

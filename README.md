@@ -10,7 +10,10 @@ Currently supports the neko and java targets.
 On Windows, CYGWIN is required!  This is due to the use of `run_shell`, which calls a bash environment.  At this point
 there isn't a better way to set the environment needed for Haxe to run properly.  
 
-The haxelib directory is in the same directory as the downloaded Haxe distribution; this allows haxelibs to be reused across builds within the same project.
+The haxelib directory is in the same directory as the downloaded Haxe distribution; this allows haxelibs to be reused
+across builds within the same project.  This also means that currently sandboxing is not supported - if every process
+runs in its own sandbox, it won't have easy access to the common haxelibs.  So for now the `--spawn_strategy=local`
+parameter must be passed to bazel.
 
 # Usage
 
