@@ -13,7 +13,7 @@ there isn't a better way to set the environment needed for Haxe to run properly.
 The haxelib directory is in the same directory as the downloaded Haxe distribution; this allows haxelibs to be reused
 across builds within the same project.  This also means that currently sandboxing is not supported - if every process
 runs in its own sandbox, it won't have easy access to the common haxelibs.  So for now the `--spawn_strategy=local`
-parameter must be passed to bazel.
+parameter must be passed to bazel if sandboxing is supported on your platform.
 
 # Usage
 
@@ -73,6 +73,7 @@ startup --windows_enable_symlinks
 build --enable_runfiles --action_env=ComSpec --action_env=USERPROFILE
 test --action_env=ComSpec --action_env=USERPROFILE
 ```
+Unfortunately the variable specified in `--action_env` is case sensitive; if you have a few different environments that provide an environment variable in different cases (e.g. CMD vs Cygin) it appears you can just pass the parameter twice in the .bazelrc.
 
 # Known Issues
 
