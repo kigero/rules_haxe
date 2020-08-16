@@ -217,8 +217,7 @@ def haxe_create_run_script(ctx, target, lib, out):
         ctx: Bazel context.
         target: The target platform.
         lib: The path to the compiled unit test library.
-        out: The path to the run script.  If this path ends in '.bat' a Windows bat script will be generated, otherwise 
-        a bash script is generated.
+        out: The path to the run script.  Regardless of the file name, a platform appropriate script will be generated.
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
