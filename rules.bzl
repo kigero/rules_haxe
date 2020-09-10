@@ -33,18 +33,18 @@ def _create_hxml_map(ctx, for_test = False):
     else:
         hxml["main_class"] = None
 
-    hxml["libs"] = list()
+    hxml["libs"] = dict()
     if hxml["target"] == "java":
-        hxml["libs"].append("hxjava")
+        hxml["libs"]["hxjava"] = "3.2.0"
     if hasattr(ctx.attr, "haxelibs"):
         for lib in ctx.attr.haxelibs:
             version = ctx.attr.haxelibs[lib]
             if version != None and version != "":
                 if version.lower().find("http") == 0:
                     version = "git:{}".format(version)
-                hxml["libs"].append("{}:{}".format(lib, version))
+                hxml["libs"][lib] = version
             else:
-                hxml["libs"].append(lib)
+                fail("Explicit versioning is required for haxelibs.")
 
     hxml["classpaths"] = list()
     hxml["classpaths"].append("src/main/haxe")
@@ -70,7 +70,7 @@ def _create_hxml_map(ctx, for_test = False):
             hxml["classpaths"].append("{}{}".format(_determine_source_root(dep_hxml["source_files"][0]), classpath))
         for lib in dep_hxml["libs"]:
             if not lib in hxml["libs"]:
-                hxml["libs"].append(lib)
+                hxml["libs"][lib] = dep_hxml["libs"][lib]
 
     return hxml
 
@@ -159,18 +159,13 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
     build_files.append(build_file_1)
 
     for lib in hxml["libs"]:
-        content += "-L {}\n".format(lib)
-        colon_idx = lib.find(":")
-        version = None
-        if colon_idx > 0:
-            version = lib[colon_idx + 1:]
-            lib = lib[:colon_idx]
-        path_file = ctx.actions.declare_file("{}.{}".format(path_prefix, count))
-        toolchain.haxelib_install(
+        version = hxml["libs"][lib]
+        content += "-L {}:{}\n".format(lib, version)
+
+        path_file = toolchain.haxelib_install(
             ctx,
             lib,
             version,
-            path_file,
         )
         count += 1
         build_files.append(path_file)
@@ -283,7 +278,7 @@ haxe_library = rule(
             doc = "Target platform.",
         ),
         "haxelibs": attr.string_dict(
-            doc = "A dict of haxelib names to optional versions that the library depends on.",
+            doc = "A dict of haxelib names to versions or git repositories (either the version or git repo is required) that the library depends on.",
         ),
         "debug": attr.bool(
             doc = "If True, will compile the library with debug flags on.",
@@ -428,7 +423,7 @@ haxe_test = rule(
             doc = "Target platform.",
         ),
         "haxelibs": attr.string_dict(
-            doc = "A dict of haxelib names to optional versions or git repositories that the unit tests depend on.",
+            doc = "A dict of haxelib names to versions or git repositories (either the version or git repo is required) that the unit tests depend on.",
         ),
         "classpaths": attr.string_list(
             doc = "Any extra classpaths to add to the build file.",

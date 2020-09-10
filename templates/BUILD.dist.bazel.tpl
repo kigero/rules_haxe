@@ -3,7 +3,7 @@ load("@rules_haxe//:def.bzl", "haxe_toolchain")
 # Get the executables tools.
 filegroup(
     name = "tools",
-    srcs = glob(["**/haxe{exe}", "**/haxelib{exe}", "**/neko{exe}", "**/Utils.hx", "**/neko-*/*", "**/haxelib_dir/haxelib_file"]),
+    srcs = glob(["**/haxe{exe}", "**/haxelib{exe}", "**/neko{exe}", "**/Utils.hx", "**/run_haxe.sh", "**/haxelib_install.sh", "**/neko-*/*", "**/haxelib_dir/haxelib_file"]),
     visibility = ["//visibility:public"],
 )
 

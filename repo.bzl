@@ -2,7 +2,7 @@
 Contains rules to instantiate the haxe repository.
 """
 
-def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tpl, gen_utils_tpl):
+def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tpl, gen_utils_tpl, _run_script, _haxelib_install_script):
     """
     Download the haxe and neko distributions, expand them, and then set up the rest of the repository.
     """
@@ -54,6 +54,14 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
         "Utils.hx",
         gen_utils_tpl,
     )
+    ctx.template(
+        "run_haxe.sh",
+        _run_script,
+    )
+    ctx.template(
+        "haxelib_install.sh",
+        _haxelib_install_script,
+    )
 
     # Create the haxelib directory...
     ctx.execute(
@@ -66,7 +74,7 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
     )
 
 def _haxe_download_impl(ctx):
-    _setup(ctx, ctx.attr.haxe_url, ctx.attr.haxe_sha256, ctx.attr.neko_url, ctx.attr.neko_sha256, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl)
+    _setup(ctx, ctx.attr.haxe_url, ctx.attr.haxe_sha256, ctx.attr.neko_url, ctx.attr.neko_sha256, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl, ctx.attr._run_script, ctx.attr._haxelib_install_script)
 
 haxe_download = repository_rule(
     doc = "Downloads Haxe and Neko and sets up the repository.",
@@ -103,6 +111,12 @@ haxe_download = repository_rule(
         ),
         "_gen_utils_tpl": attr.label(
             default = "@rules_haxe//:templates/Utils.hx",
+        ),
+        "_run_script": attr.label(
+            default = "@rules_haxe//:templates/run_haxe.sh",
+        ),
+        "_haxelib_install_script": attr.label(
+            default = "@rules_haxe//:templates/haxelib_install.sh",
         ),
     },
 )
@@ -159,7 +173,7 @@ def _haxe_download_version(ctx):
     if neko_data == None:
         fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(ctx.attr.neko_version), "neko_version")
 
-    _setup(ctx, haxe_data["url"], haxe_data["sha256"], neko_data["url"], neko_data["sha256"], ctx.attr._os, ctx.attr._arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl)
+    _setup(ctx, haxe_data["url"], haxe_data["sha256"], neko_data["url"], neko_data["sha256"], ctx.attr._os, ctx.attr._arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl, ctx.attr._run_script, ctx.attr._haxelib_install_script)
 
 haxe_download_windows_amd64 = repository_rule(
     doc = "Downloads Haxe and Neko for Windows and sets up the repository.  Not all versions are supported; use haxe_download directly for a specific unsupported version.",
@@ -184,6 +198,12 @@ haxe_download_windows_amd64 = repository_rule(
         ),
         "_gen_utils_tpl": attr.label(
             default = "@rules_haxe//:templates/Utils.hx",
+        ),
+        "_run_script": attr.label(
+            default = "@rules_haxe//:templates/run_haxe.sh",
+        ),
+        "_haxelib_install_script": attr.label(
+            default = "@rules_haxe//:templates/haxelib_install.sh",
         ),
     },
 )
@@ -212,11 +232,17 @@ haxe_download_linux_amd64 = repository_rule(
         "_gen_utils_tpl": attr.label(
             default = "@rules_haxe//:templates/Utils.hx",
         ),
+        "_run_script": attr.label(
+            default = "@rules_haxe//:templates/run_haxe.sh",
+        ),
+        "_haxelib_install_script": attr.label(
+            default = "@rules_haxe//:templates/haxelib_install.sh",
+        ),
     },
 )
 
 def _haxe_no_install(ctx):
-    _setup(ctx, None, None, None, None, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl)
+    _setup(ctx, None, None, None, None, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl, ctx.attr._run_script, ctx.attr._haxelib_install_script)
 
 haxe_no_install = repository_rule(
     doc = "Use a local installation of haxe.",
@@ -233,6 +259,12 @@ haxe_no_install = repository_rule(
         ),
         "_gen_utils_tpl": attr.label(
             default = "@rules_haxe//:templates/Utils.hx",
+        ),
+        "_run_script": attr.label(
+            default = "@rules_haxe//:templates/run_haxe.sh",
+        ),
+        "_haxelib_install_script": attr.label(
+            default = "@rules_haxe//:templates/haxelib_install.sh",
         ),
     },
 )

@@ -2,7 +2,7 @@
 Defines the Haxe toolchain.
 """
 
-def _run_haxe(ctx, inputs, outputs, toolchain, haxe_cmd, mnemonic = None):
+def _run_haxe(ctx, inputs, output, toolchain, haxe_cmd, mnemonic = None, ignore_output = False):
     """
     Runs a Haxe command using run_shell.  
     
@@ -11,36 +11,27 @@ def _run_haxe(ctx, inputs, outputs, toolchain, haxe_cmd, mnemonic = None):
     Args:
         ctx: Bazel context.
         inputs: Any inputs needed by run_shell.
-        outputs: Any outputs needed by run_shell.
+        output: The single file to direct output to.
         toolchain: The haxe toolchain instance.
         haxe_cmd: The actual haxe command to run; may be a haxe or haxelib command, e.g. `haxe build.hxml` or `haxelib install hx3compat`.
         mnemonic: The mnemonic to pass to run_shell.
+        ignore_output: True if output should be sent to /dev/null, False if output should be redirected to outout (e.g. for haxelib path commands).
     """
-    path = ""
-    if toolchain.internal.haxe_dir:
-        path += "`pwd`/{}:".format(toolchain.internal.haxe_dir)
-    if toolchain.internal.neko_dir:
-        path += "`pwd`/{}:".format(toolchain.internal.neko_dir)
-    path += "$PATH"
-
-    # Set up the PATH to include the toolchain directories.
-    command = " export PATH={}".format(path)
-
-    # Set the absolute path to the local haxelib repo.
-    command += " && export HAXELIB_PATH=`pwd`/{}".format(toolchain.internal.env["HAXELIB_PATH"])
-
-    # If on windows, the HAXELIB_PATH needs to be a windows path.
     if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
-        command += " && export HAXELIB_PATH=`cygpath -w $HAXELIB_PATH`"
+        host = "WIN"
+    else:
+        host = "LIN"
 
-    # Add the haxe command.  Redirecting stdout to /dev/null seems OK - warnings and errors still show up on the screen.
-    command += " && {} > /dev/null".format(haxe_cmd)
+    if ignore_output:
+        redirect_output = "/dev/null"
+    else:
+        redirect_output = output.path
 
-    # Finally run the command.
     ctx.actions.run_shell(
-        outputs = outputs,
+        outputs = [output],
         inputs = inputs,
-        command = command,
+        command = "{} $@".format(toolchain.internal.run_haxe_file.path),
+        arguments = [toolchain.internal.neko_dir, toolchain.internal.haxe_dir, toolchain.internal.env["HAXELIB_PATH"], host, redirect_output, haxe_cmd],
         use_default_shell_env = True,
         mnemonic = mnemonic,
     )
@@ -75,8 +66,9 @@ def haxe_compile(ctx, hxml, out, runfiles = None, deps = []):
     _run_haxe(
         ctx,
         inputs = inputs,
-        outputs = [out],
+        output = out,
         toolchain = toolchain,
+        ignore_output = True,
         haxe_cmd = "haxe {}".format(hxml.path),
         mnemonic = "HaxeCompile",
     )
@@ -104,26 +96,27 @@ def _haxe_haxelib(ctx, cmd, out, runfiles = None, deps = []):
     _run_haxe(
         ctx,
         inputs = inputs,
-        outputs = [out],
+        output = out,
         toolchain = toolchain,
-        haxe_cmd = "haxelib {} > {}".format(cmd, out.path),
+        haxe_cmd = "haxelib {}".format(cmd),
         mnemonic = "Haxelib",
     )
 
-def haxe_haxelib_path(ctx, haxelib, out, runfiles = [], deps = []):
+def haxe_haxelib_path(ctx, haxelib, version, out, runfiles = [], deps = []):
     """
     Get the path information for a haxelib.
     
     Args:
         ctx: Bazel context.
         haxelib: The haxelib to install.
+        version: The haxelib version to check.
         out: A file that captures the "path" information of the haxelib command.
         runfiles: Any runfiles needed by the compilation.
         deps: Any deps needed by the compilation.
     """
-    _haxe_haxelib(ctx, "path {}".format(haxelib), out, runfiles, deps)
+    _haxe_haxelib(ctx, "path {}:{}".format(haxelib, version), out, runfiles, deps)
 
-def haxe_haxelib_install(ctx, haxelib, version, out, runfiles = [], deps = []):
+def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
     """
     Install a haxelib.  
     
@@ -134,11 +127,13 @@ def haxe_haxelib_install(ctx, haxelib, version, out, runfiles = [], deps = []):
         ctx: Bazel context.
         haxelib: The haxelib to install.
         version: The version of the haxelib to perform the action on; specify "git:<repo_url>" to use a git repository.
-        out: A file that captures the "path" information of the haxelib command.
         runfiles: Any runfiles needed by the compilation.
         deps: Any deps needed by the compilation.
+    
+    Returns:
+        The output file of the install process, which can be used to ensure that a haxelib is installed before continuing on.
     """
-    install_out = ctx.actions.declare_file("haxelib_install_out-{}".format(haxelib))
+    install_out = ctx.actions.declare_file("haxelib_install_{}_{}".format(haxelib, version))
     if version != None and version != "":
         if version.startswith("git:"):
             cmd = "git {} {}".format(haxelib, version[4:])
@@ -147,8 +142,32 @@ def haxe_haxelib_install(ctx, haxelib, version, out, runfiles = [], deps = []):
     else:
         cmd = "install {}".format(haxelib)
 
-    _haxe_haxelib(ctx, cmd, install_out, runfiles, deps)
-    haxe_haxelib_path(ctx, haxelib, out, runfiles + [install_out], deps)
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    inputs = (
+        [dep.info.archive for dep in deps] +
+        toolchain.internal.tools
+    )
+    if runfiles != None:
+        inputs += runfiles
+
+    if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
+        host = "WIN"
+    else:
+        host = "LIN"
+
+    ctx.actions.run_shell(
+        outputs = [install_out],
+        inputs = inputs,
+        command = "{} $@".format(toolchain.internal.haxelib_install_file.path),
+        arguments = [toolchain.internal.neko_dir, toolchain.internal.haxe_dir, toolchain.internal.env["HAXELIB_PATH"], host, install_out.path, haxelib, version],
+        use_default_shell_env = True,
+        mnemonic = "HaxelibInstall",
+    )
+
+    out = ctx.actions.declare_file("haxelib_path_{}_{}".format(haxelib, version))
+    haxe_haxelib_path(ctx, haxelib, version, out, runfiles + [install_out], deps)
+    return out
 
 def haxe_create_test_class(ctx, srcs, out):
     """
@@ -276,6 +295,8 @@ def _haxe_toolchain_impl(ctx):
     haxelib_file = None
     neko_cmd = None
     utils_file = None
+    run_haxe_file = None
+    haxelib_install_file = None
     haxe_dir = None
     neko_dir = None
 
@@ -288,6 +309,10 @@ def _haxe_toolchain_impl(ctx):
             haxelib_file = f
         if f.path.endswith("/Utils.hx"):
             utils_file = f
+        if f.path.endswith("/run_haxe.sh"):
+            run_haxe_file = f
+        if f.path.endswith("/haxelib_install.sh"):
+            haxelib_install_file = f
 
     if haxe_cmd:
         haxe_dir = haxe_cmd.dirname
@@ -301,6 +326,10 @@ def _haxe_toolchain_impl(ctx):
         fail("could not locate haxelib file")
     if not utils_file:
         fail("could not locate Utils.hx file")
+    if not run_haxe_file:
+        fail("could not locate run_haxe.sh file")
+    if not haxelib_install_file:
+        fail("could not locate haxelib_install.sh file")
 
     env = {
         "HAXELIB_PATH": haxelib_file.dirname,
@@ -319,6 +348,8 @@ def _haxe_toolchain_impl(ctx):
             haxe_dir = haxe_dir,
             neko_dir = neko_dir,
             utils_file = utils_file,
+            run_haxe_file = run_haxe_file,
+            haxelib_install_file = haxelib_install_file,
             env = env,
             tools = ctx.files.tools,
         ),

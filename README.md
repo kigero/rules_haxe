@@ -57,7 +57,7 @@ haxe_test(
         "src/main/haxe/**/*.hx",
         "src/test/haxe/**/*.hx",
     ]),
-    haxelibs = ["hx3compat"],
+    haxelibs = {"hx3compat": "1.0.3"},
 )
 ```
 Note that an appropriate haxelib will automatically be added to the haxelibs list for the current target; for example if
@@ -74,11 +74,3 @@ build --enable_runfiles --action_env=ComSpec --action_env=USERPROFILE
 test --action_env=ComSpec --action_env=USERPROFILE
 ```
 Unfortunately the variable specified in `--action_env` is case sensitive; if you have a few different environments that provide an environment variable in different cases (e.g. CMD vs Cygin) it appears you can just pass the parameter twice in the .bazelrc.
-
-# Known Issues
-
-* On windows (maybe other platforms, haven't tested it) running multiple builds at the same time can lead to an "Access
-  is denied" error.  As best as I can tell, this happens when a haxelib is being installed for one build while another
-  build attempts to use any haxelib in a compile, but the error is coming from the haxe compilation and gives no
-  indication as to the underlying issue.  Typically this only happens the first time after a clean; running the same
-  command again will complete OK.   

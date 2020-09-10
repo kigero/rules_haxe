@@ -137,20 +137,26 @@ class Utils
 			var javaSrcDir = new Path(intermediatePath).dir + "/src";
 			for (path in toKeep)
 			{
-				path = path.replace(".class", ".java");
-				var bytes = File.getBytes(javaSrcDir + "/" + path);
+				try
+				{
+					path = path.replace(".class", ".java");
+					var bytes = File.getBytes(javaSrcDir + "/" + path);
 
-				var entry:Entry =
-					{
-						fileName: path,
-						fileSize: bytes.length,
-						fileTime: Date.now(),
-						compressed: false,
-						dataSize: 0,
-						data: bytes,
-						crc32: Crc32.make(bytes)
-					};
-				outZip.writeEntry(entry);
+					var entry:Entry =
+						{
+							fileName: path,
+							fileSize: bytes.length,
+							fileTime: Date.now(),
+							compressed: false,
+							dataSize: 0,
+							data: bytes,
+							crc32: Crc32.make(bytes)
+						};
+					outZip.writeEntry(entry);
+				} catch (e:Any)
+				{
+					// Just ignore errors generating sources, these are likely from inner classes which aren't handled very well currently.
+				}
 			}
 		}
 		outZip.writeCDR();
