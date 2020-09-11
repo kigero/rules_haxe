@@ -61,6 +61,11 @@ def _create_hxml_map(ctx, for_test = False):
             for f in d.files.to_list():
                 hxml["source_files"].append(f.path)
 
+    hxml["c-args"] = list()
+    if hxml["target"] == "java":
+        if "haxe_java_target_version" in ctx.var:
+            hxml["c-args"] += ["-source", ctx.var["haxe_java_target_version"], "-target", ctx.var["haxe_java_target_version"]]
+
     # Handle Dependencies
     for dep in ctx.attr.deps:
         dep_hxml = dep[HaxeLibraryInfo].hxml
@@ -130,6 +135,10 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
         if not classpath.startswith("external"):
             classpath = "{}{}".format(source_root, classpath)
         content += "-p {}\n".format(classpath)
+
+    # Compiler Args
+    for c_arg in hxml["c-args"]:
+        content += "--c-arg {}\n".format(c_arg)
 
     # Source or Main files
     if hxml["main_class"] != None:

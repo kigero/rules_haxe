@@ -91,8 +91,19 @@ haxe_gen_hxml(
 )
 ```
 
+# Targets
 
-## Windows
+## Java
+
+You can specify the target java version to compile to by adding a variable definition like this (for java 1.8):
+```
+--define=haxe_java_target_version=1.8
+```
+Setting this variable sets the `-source` and `-target` compiler options in the HXML file to the value set.  This
+propagates to dependencies as well, so if you usually compile for Java 11 but you have one pesky deployment target that
+uses Java 1.8, setting this should compile all the dependencies with Java 1.8.
+
+# Windows
 
 Windows is a bit of a pain; you'll need symlink support as described in the [Bazel
 docs](https://docs.bazel.build/versions/master/windows.html#enable-symlink-support), as well as some variables passed
