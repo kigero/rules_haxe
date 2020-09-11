@@ -4,7 +4,7 @@ Public rule definitions for the Haxe repositorry.
 Documentation for these rules are in their respective rule definitions.
 """
 
-load("//:rules.bzl", _haxe_library = "haxe_library", _haxe_test = "haxe_test", _haxelib_install = "haxelib_install")
+load("//:rules.bzl", _haxe_gen_hxml = "haxe_gen_hxml", _haxe_library = "haxe_library", _haxe_test = "haxe_test", _haxelib_install = "haxelib_install")
 load("//:providers.bzl", _HaxeLibraryInfo = "HaxeLibraryInfo")
 load("//:toolchain.bzl", _haxe_toolchain = "haxe_toolchain")
 load("//:repo.bzl", _haxe_download = "haxe_download", _haxe_download_linux_amd64 = "haxe_download_linux_amd64", _haxe_download_windows_amd64 = "haxe_download_windows_amd64", _haxe_no_install = "haxe_no_install")
@@ -13,6 +13,7 @@ load("//:repo.bzl", _haxe_download = "haxe_download", _haxe_download_linux_amd64
 haxe_library = _haxe_library
 haxe_test = _haxe_test
 haxelib_install = _haxelib_install
+haxe_gen_hxml = _haxe_gen_hxml
 
 # Repository rules.
 haxe_download = _haxe_download

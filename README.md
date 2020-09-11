@@ -39,10 +39,13 @@ register_toolchains(
 )
 ```
 
-Next, in the BUILD file you want to use the `haxe_library` and `haxe_test` rules to build libraries and test your code respectively.
+Note that an appropriate haxelib will automatically be added to the haxelibs list for the current target; for example if
+the target is "java", the "hxjava" haxelib will automatically be added.
+
+## Build library
 
 ```
-load("@rules_haxe//:def.bzl", "haxe_library", "haxe_test")
+load("@rules_haxe//:def.bzl", "haxe_library")
 
 haxe_library(
     name = "neko-lib",
@@ -50,6 +53,12 @@ haxe_library(
     debug = True,
     library_name = "validation",
 )
+```
+
+## Test
+
+```
+load("@rules_haxe//:def.bzl", "haxe_test")
 
 haxe_test(
     name = "neko-test",
@@ -60,8 +69,28 @@ haxe_test(
     haxelibs = {"hx3compat": "1.0.3"},
 )
 ```
-Note that an appropriate haxelib will automatically be added to the haxelibs list for the current target; for example if
-the target is "java", the "hxjava" haxelib will automatically be added.
+
+## Generate HXML File
+
+This is handy for working within VSCode.  It generates a build.hxml file based off the current configuration that works
+with VSHaxe.  The file is generated within the `bazel-bin` directory; it's recommended to then link to this file from
+the project directory with `ln` or `mklink` so that VSHaxe can find it easily.
+
+```
+load("@rules_haxe//:def.bzl", "haxe_library", "haxe_gen_hxml")
+
+haxe_gen_hxml(
+    name = "gen-neko-hxml",
+    srcs = glob(["src/main/haxe/**/*.hx"]),
+    bazel_workspace_path = "bazel-validation",
+    debug = True,
+    hxml_name = "build-neko.hxml",
+    library_name = "validation",
+    target = "neko",
+    visibility = ["//visibility:public"]
+)
+```
+
 
 ## Windows
 
