@@ -177,7 +177,6 @@ class Utils
 			findMatchingSourcePaths(javaSrcDir, toKeep, sourcePaths);
 			for (path in sourcePaths)
 			{
-				trace("path: " + javaSrcDir + "/" + path);
 				var bytes = File.getBytes(javaSrcDir + "/" + path);
 
 				var entry:Entry =
