@@ -1,5 +1,6 @@
 import haxe.io.Path;
 import sys.io.File;
+import sys.FileSystem;
 import haxe.zip.Entry;
 import haxe.crypto.Crc32;
 
@@ -102,6 +103,30 @@ class Utils
 		return clsNames;
 	}
 
+	private static function findMatchingSourcePaths(path:String, matching:Array<String>, output:Array<String>, relPath = "")
+	{
+		for (child in FileSystem.readDirectory(path))
+		{
+			var fullPath = path + "/" + child;
+			if (FileSystem.isDirectory(fullPath))
+			{
+				findMatchingSourcePaths(fullPath, matching, output, relPath + child + "/");
+			}
+			else
+			{
+				var fullRelPath = relPath + child;
+				for (fqcn in matching)
+				{
+					if (fullRelPath.startsWith(fqcn) && fullRelPath.endsWith(".java"))
+					{
+						output.push(fullRelPath);
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	private static function createFinalJar(intermediatePath:String, outputPath:String, srcs:Array<String>, strip = true, includeSources = true)
 	{
 		var toKeep = new Array<String>();
@@ -113,7 +138,7 @@ class Utils
 			{
 				fqcn = fqcn.replace(".", "/");
 
-				toKeep.push(fqcn + ".class");
+				toKeep.push(fqcn);
 			}
 		}
 
@@ -125,9 +150,22 @@ class Utils
 
 		for (entry in entries)
 		{
-			if (strip && !toKeep.contains(entry.fileName))
+			if (strip)
 			{
-				continue;
+				var inZip = false;
+				for (fqcn in toKeep)
+				{
+					if (entry.fileName.startsWith(fqcn))
+					{
+						inZip = true;
+						break;
+					}
+				}
+
+				if (!inZip || !entry.fileName.endsWith(".class"))
+				{
+					continue;
+				}
 			}
 			outZip.writeEntry(entry);
 		}
@@ -135,28 +173,24 @@ class Utils
 		if (includeSources)
 		{
 			var javaSrcDir = new Path(intermediatePath).dir + "/src";
-			for (path in toKeep)
+			var sourcePaths = new Array<String>();
+			findMatchingSourcePaths(javaSrcDir, toKeep, sourcePaths);
+			for (path in sourcePaths)
 			{
-				try
-				{
-					path = path.replace(".class", ".java");
-					var bytes = File.getBytes(javaSrcDir + "/" + path);
+				trace("path: " + javaSrcDir + "/" + path);
+				var bytes = File.getBytes(javaSrcDir + "/" + path);
 
-					var entry:Entry =
-						{
-							fileName: path,
-							fileSize: bytes.length,
-							fileTime: Date.now(),
-							compressed: false,
-							dataSize: 0,
-							data: bytes,
-							crc32: Crc32.make(bytes)
-						};
-					outZip.writeEntry(entry);
-				} catch (e:Any)
-				{
-					// Just ignore errors generating sources, these are likely from inner classes which aren't handled very well currently.
-				}
+				var entry:Entry =
+					{
+						fileName: path,
+						fileSize: bytes.length,
+						fileTime: Date.now(),
+						compressed: false,
+						dataSize: 0,
+						data: bytes,
+						crc32: Crc32.make(bytes)
+					};
+				outZip.writeEntry(entry);
 			}
 		}
 		outZip.writeCDR();
