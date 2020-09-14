@@ -296,7 +296,7 @@ haxe_library = rule(
             doc = "Any extra classpaths to add to the build file.",
         ),
         "strip_haxe": attr.bool(
-            default = False,
+            default = True,
             doc = "Whether to strip haxe classes from the resultant library.  Supported platforms: java",
         ),
         "deps": attr.label_list(
