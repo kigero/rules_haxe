@@ -69,32 +69,41 @@ cd $LIN_HAXELIB_PATH
 # Create the comma version of the library name if needed.
 mkdir -p $COMMA_LIB
 cd $COMMA_LIB
+    
+if [[ $DOTTED_VERSION == "git:"* ]]; then
+    git clone ${DOTTED_VERSION:4} git
 
-# Get rid of any bad files using the comma version of the version, perhaps left over from a failed install.
-rm -rf $COMMA_VERSION  
-
-# Get the zip file from the haxelib repo.
-curl -s -L -o lib.zip https://lib.haxe.org/files/3.0/$COMMA_LIB-$COMMA_VERSION.zip
-
-# Unzip it.  On windows unzip sometimes has issues with duplicate file names - not sure why - so ignore them if they
-# occur, hoping that a later step will catch the error if there's a real problem.
-unzip -qq lib.zip || true
-rm lib.zip
-
-# Store the haxelib contents in the comma version subdirectory.  It seems that the haxelib.json file is always in this
-# subdirectory, so use that as a marker to see where things need to be moved.
-JSON_PATH=`find | grep haxelib.json`
-JSON_PATH=`dirname $JSON_PATH`
-if [[ "." == "$JSON_PATH" ]]; then
-    mkdir $COMMA_VERSION
-    ls | grep -v $COMMA_VERSION | xargs mv -t $COMMA_VERSION
+    # If there is no .current file, write the git version to that file.
+    if [ ! -f .current ]; then
+        echo git > .current
+    fi
 else
-    mv $JSON_PATH $COMMA_VERSION
-fi
+    # Get rid of any bad files using the comma version of the version, perhaps left over from a failed install.
+    rm -rf $COMMA_VERSION  
 
-# If there is no .current file, write the current install version to that file.
-if [ ! -f .current ]; then
-    echo $DOTTED_VERSION > .current
+    # Get the zip file from the haxelib repo.
+    curl -s -L -o lib.zip https://lib.haxe.org/files/3.0/$COMMA_LIB-$COMMA_VERSION.zip
+
+    # Unzip it.  On windows unzip sometimes has issues with duplicate file names - not sure why - so ignore them if they
+    # occur, hoping that a later step will catch the error if there's a real problem.
+    unzip -qq lib.zip || true
+    rm lib.zip
+
+    # Store the haxelib contents in the comma version subdirectory.  It seems that the haxelib.json file is always in this
+    # subdirectory, so use that as a marker to see where things need to be moved.
+    JSON_PATH=`find | grep haxelib.json`
+    JSON_PATH=`dirname $JSON_PATH`
+    if [[ "." == "$JSON_PATH" ]]; then
+        mkdir $COMMA_VERSION
+        ls | grep -v $COMMA_VERSION | xargs mv -t $COMMA_VERSION
+    else
+        mv $JSON_PATH $COMMA_VERSION
+    fi
+
+    # If there is no .current file, write the current install version to that file.
+    if [ ! -f .current ]; then
+        echo $DOTTED_VERSION > .current
+    fi
 fi
 
 # Finally write out the path to the output file.  If the haxelib failed to install for some reason this should fail,

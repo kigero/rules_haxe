@@ -133,17 +133,14 @@ def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
     Returns:
         The output file of the install process, which can be used to ensure that a haxelib is installed before continuing on.
     """
-    install_out = ctx.actions.declare_file("haxelib_install_{}_{}".format(haxelib, version))
-    if version != None and version != "":
-        if version.startswith("git:"):
-            cmd = "git {} {}".format(haxelib, version[4:])
-        else:
-            cmd = "install {} {}".format(haxelib, version)
-    else:
-        cmd = "install {}".format(haxelib)
-
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
+    if version.startswith("git:"):
+        path_suffix = "{}_git".format(haxelib)
+    else:
+        path_suffix = "{}_{}".format(haxelib, version)
+
+    install_out = ctx.actions.declare_file("haxelib_install_{}".format(path_suffix))
     inputs = (
         [dep.info.archive for dep in deps] +
         toolchain.internal.tools
@@ -165,7 +162,7 @@ def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
         mnemonic = "HaxelibInstall",
     )
 
-    out = ctx.actions.declare_file("haxelib_path_{}_{}".format(haxelib, version))
+    out = ctx.actions.declare_file("haxelib_path_{}".format(path_suffix))
     haxe_haxelib_path(ctx, haxelib, version, out, runfiles + [install_out], deps)
     return out
 
