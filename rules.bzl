@@ -33,6 +33,11 @@ def _create_hxml_map(ctx, for_test = False):
     else:
         hxml["main_class"] = None
 
+    hxml["args"] = list()
+    if hasattr(ctx.attr, "extra_args"):
+        for arg in ctx.attr.extra_args:
+            hxml["args"].append(arg)
+
     hxml["libs"] = dict()
     if hxml["target"] == "java":
         hxml["libs"]["hxjava"] = "3.2.0"
@@ -61,6 +66,14 @@ def _create_hxml_map(ctx, for_test = False):
             for f in d.files.to_list():
                 hxml["source_files"].append(f.path)
 
+    hxml["resources"] = dict()
+    if hasattr(ctx.files, "resources"):
+        for resource in ctx.files.resources:
+            name = resource.path
+            name = name.replace("src/main/resources/", "")
+            name = name.replace("src/test/resources/", "")
+            hxml["resources"][resource.path] = name
+
     hxml["c-args"] = list()
     if hxml["target"] == "java":
         if "haxe_java_target_version" in ctx.var:
@@ -76,6 +89,11 @@ def _create_hxml_map(ctx, for_test = False):
         for lib in dep_hxml["libs"]:
             if not lib in hxml["libs"]:
                 hxml["libs"][lib] = dep_hxml["libs"][lib]
+        for resource in dep_hxml["resources"]:
+            if not resource in hxml["resources"]:
+                hxml["resources"][resource] = dep_hxml["resources"][resource]
+        for arg in dep_hxml["args"]:
+            hxml["args"].append(arg)
 
     return hxml
 
@@ -139,6 +157,14 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
     # Compiler Args
     for c_arg in hxml["c-args"]:
         content += "--c-arg {}\n".format(c_arg)
+
+    # User Args
+    for arg in hxml["args"]:
+        content += "{}\n".format(arg)
+
+    # Resources
+    for path in hxml["resources"]:
+        content += "--resource {}@{}\n".format(path, hxml["resources"][path])
 
     # Source or Main files
     if hxml["main_class"] != None:
@@ -282,6 +308,10 @@ haxe_library = rule(
             allow_files = True,
             doc = "Haxe source code.",
         ),
+        "resources": attr.label_list(
+            allow_files = True,
+            doc = "Resources to include in the final build.",
+        ),
         "target": attr.string(
             default = "neko",
             doc = "Target platform.",
@@ -302,6 +332,9 @@ haxe_library = rule(
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo],
             doc = "Direct dependencies of the library.",
+        ),
+        "extra_args": attr.string_list(
+            doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",
         ),
     },
 )
@@ -403,7 +436,7 @@ def _haxe_test_impl(ctx):
 
     return [
         DefaultInfo(
-            runfiles = ctx.runfiles(files = ctx.files.srcs + toolchain.internal.tools + [lib, launcher_file]),
+            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [lib, launcher_file]),
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
@@ -427,6 +460,14 @@ haxe_test = rule(
             allow_files = True,
             doc = "Haxe source code",
         ),
+        "resources": attr.label_list(
+            allow_files = True,
+            doc = "Resources to embed within the Haxe test classes.",
+        ),
+        "runtime_deps": attr.label_list(
+            allow_files = True,
+            doc = "Any files or dependencies that should be made available to the test executor.",
+        ),
         "target": attr.string(
             default = "neko",
             doc = "Target platform.",
@@ -440,6 +481,9 @@ haxe_test = rule(
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo],
             doc = "Direct dependencies of the library",
+        ),
+        "extra_args": attr.string_list(
+            doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",
         ),
     },
 )

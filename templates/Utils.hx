@@ -152,19 +152,27 @@ class Utils
 		{
 			if (strip)
 			{
-				var inZip = false;
-				for (fqcn in toKeep)
-				{
-					if (entry.fileName.startsWith(fqcn))
-					{
-						inZip = true;
-						break;
-					}
-				}
-
-				if (!inZip || !entry.fileName.endsWith(".class"))
+				if (entry.fileName.endsWith("/"))
 				{
 					continue;
+				}
+
+				if (entry.fileName.endsWith(".class"))
+				{
+					var inZip = false;
+					for (fqcn in toKeep)
+					{
+						if (entry.fileName.startsWith(fqcn))
+						{
+							inZip = true;
+							break;
+						}
+					}
+
+					if (!inZip)
+					{
+						continue;
+					}
 				}
 			}
 			outZip.writeEntry(entry);
