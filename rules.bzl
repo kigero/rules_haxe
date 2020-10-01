@@ -39,14 +39,14 @@ def _find_direct_resources(ctx):
     return rtrn
 
 def _find_library_name(ctx):
-    if ctx.attr.library_name != "":
+    if hasattr(ctx.attr, "library_name") and ctx.attr.library_name != "":
         return ctx.attr.library_name
     else:
         for dep in ctx.attr.deps:
             haxe_dep = dep[HaxeProjectInfo]
             if haxe_dep == None:
                 continue
-            if haxe_dep.library_name != None:
+            if haxe_dep.library_name != None and haxe_dep.library_name != "":
                 return haxe_dep.library_name
 
     return ctx.attr.name
@@ -326,6 +326,17 @@ def _haxe_library_impl(ctx):
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
             ),
         ),
+        HaxeProjectInfo(
+            info = struct(),
+            hxml = hxml,
+            srcs = ctx.files.srcs,
+            resources = ctx.files.resources,
+            library_name = ctx.attr.library_name,
+            deps = depset(
+                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
     ]
 
     # This allows java targets to use the results of this rule.
@@ -419,6 +430,13 @@ def _haxelib_install_impl(ctx):
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
             ),
         ),
+        HaxeProjectInfo(
+            info = struct(),
+            deps = depset(
+                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
     ]
 
 haxelib_install = rule(
@@ -491,6 +509,17 @@ def _haxe_test_impl(ctx):
             deps = depset(
                 direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
+        HaxeProjectInfo(
+            info = struct(),
+            hxml = hxml,
+            srcs = ctx.files.srcs,
+            resources = ctx.files.resources,
+            library_name = ctx.attr.name,
+            deps = depset(
+                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
             ),
         ),
     ]
