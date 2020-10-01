@@ -54,11 +54,10 @@ def haxe_compile(ctx, hxml, out, runfiles = None, deps = []):
     args = ctx.actions.args()
     args.add(hxml.path)
 
-    inputs = (
-        [hxml] +
-        [dep.info.lib for dep in deps] +
-        toolchain.internal.tools
-    )
+    inputs = [hxml] + toolchain.internal.tools
+    for dep in deps:
+        if hasattr(dep.info, "lib"):
+            inputs.append(dep.info.lib)
 
     if runfiles != None:
         inputs += runfiles
@@ -214,9 +213,8 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include
         command = "haxe"
     command += " -p " + toolchain.internal.utils_file.dirname
     command += " --run Utils.hx createFinalJar {} {} {} {}".format(intermediate.path, output.path, "true" if strip else "false", "true" if include_sources else "false")
-    for i, d in enumerate(srcs):
-        for f in d.files.to_list():
-            command += " " + f.path
+    for file in srcs:
+        command += " " + file.path
 
     ctx.actions.run_shell(
         outputs = [output],

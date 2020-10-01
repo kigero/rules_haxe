@@ -1,6 +1,6 @@
 """Haxe build rules."""
 
-load(":providers.bzl", "HaxeLibraryInfo")
+load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
 
 def _determine_source_root(path):
     source_root = ""
@@ -9,6 +9,47 @@ def _determine_source_root(path):
         if parts[idx] == "external":
             source_root += "external/{}/".format(parts[idx + 1])
     return source_root
+
+def _find_direct_sources(ctx):
+    rtrn = []
+    if hasattr(ctx.files, "srcs"):
+        rtrn += ctx.files.srcs
+
+    for dep in ctx.attr.deps:
+        haxe_dep = dep[HaxeProjectInfo]
+        if haxe_dep == None:
+            continue
+        if hasattr(haxe_dep, "srcs"):
+            rtrn += haxe_dep.srcs
+
+    return rtrn
+
+def _find_direct_resources(ctx):
+    rtrn = []
+    if hasattr(ctx.files, "resources"):
+        rtrn += ctx.files.resources
+
+    for dep in ctx.attr.deps:
+        haxe_dep = dep[HaxeProjectInfo]
+        if haxe_dep == None:
+            continue
+        if hasattr(haxe_dep, "resources"):
+            rtrn += haxe_dep.resources
+
+    return rtrn
+
+def _find_library_name(ctx):
+    if ctx.attr.library_name != "":
+        return ctx.attr.library_name
+    else:
+        for dep in ctx.attr.deps:
+            haxe_dep = dep[HaxeProjectInfo]
+            if haxe_dep == None:
+                continue
+            if haxe_dep.library_name != None:
+                return haxe_dep.library_name
+
+    return ctx.attr.name
 
 def _create_hxml_map(ctx, for_test = False):
     """
@@ -22,7 +63,7 @@ def _create_hxml_map(ctx, for_test = False):
 
     hxml["for_test"] = for_test
 
-    hxml["name"] = ctx.attr.library_name if hasattr(ctx.attr, "library_name") else ctx.attr.name
+    hxml["name"] = _find_library_name(ctx)
     hxml["target"] = ctx.attr.target if hasattr(ctx.attr, "target") else None
     hxml["debug"] = ctx.attr.debug if hasattr(ctx.attr, "debug") else False
 
@@ -61,18 +102,15 @@ def _create_hxml_map(ctx, for_test = False):
             hxml["classpaths"].append(p)
 
     hxml["source_files"] = list()
-    if hasattr(ctx.attr, "srcs"):
-        for i, d in enumerate(ctx.attr.srcs):
-            for f in d.files.to_list():
-                hxml["source_files"].append(f.path)
+    for src in _find_direct_sources(ctx):
+        hxml["source_files"].append(src.path)
 
     hxml["resources"] = dict()
-    if hasattr(ctx.files, "resources"):
-        for resource in ctx.files.resources:
-            name = resource.path
-            name = name.replace("src/main/resources/", "")
-            name = name.replace("src/test/resources/", "")
-            hxml["resources"][resource.path] = name
+    for resource in _find_direct_resources(ctx):
+        name = resource.path
+        name = name.replace("src/main/resources/", "")
+        name = name.replace("src/test/resources/", "")
+        hxml["resources"][resource.path] = name
 
     hxml["c-args"] = list()
     if hxml["target"] == "java":
@@ -81,9 +119,10 @@ def _create_hxml_map(ctx, for_test = False):
 
     # Handle Dependencies
     for dep in ctx.attr.deps:
-        dep_hxml = dep[HaxeLibraryInfo].hxml
-        if dep_hxml == None:
+        haxe_dep = dep[HaxeLibraryInfo]
+        if haxe_dep == None or haxe_dep.hxml == None:
             continue
+        dep_hxml = haxe_dep.hxml
         for classpath in dep_hxml["classpaths"]:
             hxml["classpaths"].append("{}{}".format(_determine_source_root(dep_hxml["source_files"][0]), classpath))
         for lib in dep_hxml["libs"]:
@@ -110,6 +149,10 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
         out_file: The output file that the build.hxml should be written to.
         suffix: Optional suffix to append to the build parameters.
     """
+
+    # Ensure there are some source files to work with.
+    if len(hxml["source_files"]) == 0:
+        fail("No {} source files found.".format("test" if hxml["for_test"] else ""))
 
     # Determine if we're in a dependant build, and if so what the correct source root is.
     # This is fairly toxic.
@@ -254,7 +297,7 @@ def _haxe_library_impl(ctx):
     if hxml["target"] == "java":
         toolchain.create_final_jar(
             ctx,
-            ctx.attr.srcs,
+            _find_direct_sources(ctx),
             intermediate,
             output,
             ctx.attr.strip_haxe,
@@ -287,10 +330,14 @@ def _haxe_library_impl(ctx):
 
     # This allows java targets to use the results of this rule.
     if hxml["target"] == "java":
+        java_deps = []
+        for dep in ctx.attr.deps:
+            if hasattr(dep, "JavaInfo"):
+                java_deps.append(dep[JavaInfo])
         rtrn.append(JavaInfo(
             output_jar = output,
             compile_jar = output,
-            deps = [dep[JavaInfo] for dep in ctx.attr.deps],
+            deps = java_deps,
         ))
 
     return rtrn
@@ -304,9 +351,8 @@ haxe_library = rule(
             doc = "The name of the library to create; if not provided the rule name will be used.",
         ),
         "srcs": attr.label_list(
-            mandatory = True,
             allow_files = True,
-            doc = "Haxe source code.",
+            doc = "Haxe source code.  Must be included unless depending on a haxe_project_definition rule or other Haxe project.",
         ),
         "resources": attr.label_list(
             allow_files = True,
@@ -481,6 +527,89 @@ haxe_test = rule(
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo],
             doc = "Direct dependencies of the library",
+        ),
+        "extra_args": attr.string_list(
+            doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",
+        ),
+    },
+)
+
+###############################################################################
+
+def _haxe_project_definition(ctx):
+    """
+    _haxe_source_definition implementation.
+    
+    Args:
+        ctx: Bazel context.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    # Build the HXML file.
+    hxml = _create_hxml_map(ctx)
+
+    return [
+        DefaultInfo(
+            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources),
+        ),
+        HaxeProjectInfo(
+            info = struct(),
+            hxml = hxml,
+            srcs = ctx.files.srcs,
+            resources = ctx.files.resources,
+            library_name = ctx.attr.library_name,
+            deps = depset(
+                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
+        HaxeLibraryInfo(
+            info = struct(),
+            hxml = hxml,
+            deps = depset(
+                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
+    ]
+
+haxe_project_definition = rule(
+    doc = "Define the baseline project definition, which can be used in other projects to not depend specifically on a particular target output.",
+    implementation = _haxe_project_definition,
+    toolchains = ["@rules_haxe//:toolchain_type"],
+    attrs = {
+        "library_name": attr.string(
+            doc = "The name of the library to create; if not provided the rule name will be used.",
+        ),
+        "srcs": attr.label_list(
+            mandatory = True,
+            allow_files = True,
+            doc = "Haxe source code.",
+        ),
+        "resources": attr.label_list(
+            allow_files = True,
+            doc = "Resources to include in the final build.",
+        ),
+        "target": attr.string(
+            default = "neko",
+            doc = "Target platform.",
+        ),
+        "haxelibs": attr.string_dict(
+            doc = "A dict of haxelib names to versions or git repositories (either the version or git repo is required) that the library depends on.",
+        ),
+        "debug": attr.bool(
+            doc = "If True, will compile the library with debug flags on.",
+        ),
+        "classpaths": attr.string_list(
+            doc = "Any extra classpaths to add to the build file.",
+        ),
+        "strip_haxe": attr.bool(
+            default = True,
+            doc = "Whether to strip haxe classes from the resultant library.  Supported platforms: java",
+        ),
+        "deps": attr.label_list(
+            providers = [HaxeLibraryInfo, HaxeProjectInfo],
+            doc = "Direct dependencies of the library.",
         ),
         "extra_args": attr.string_list(
             doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",

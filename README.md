@@ -55,6 +55,29 @@ haxe_library(
 )
 ```
 
+An alternative way of defining the library is to use the `haxe_project_definition` rule:
+```
+load("@rules_haxe//:def.bzl", "haxe_library")
+
+haxe_project_definition(
+    name = "haxe-def",
+    srcs = glob(["src/main/haxe/**/*.hx"]),
+    debug = True,
+)
+
+haxe_library(
+    name = "neko-lib",
+    library_name = "validation",
+    deps = ["//:haxe-def"],
+)
+```
+The benefits to this route are:
+1. If you have rules to build libraries for multiple targets, you can define the project once and depend on it from 
+those targets, allowing a common configuration to be used.
+1. If you have downstream projects that depend on this project, they can depend directly on the project definition 
+rather than a build artifact for a specific target.  This speeds up compilation of the downstream targets, and reduces 
+the amount of boilerplate when those downstream projects build for multiple targets.
+
 ## Test
 
 ```
@@ -62,13 +85,14 @@ load("@rules_haxe//:def.bzl", "haxe_test")
 
 haxe_test(
     name = "neko-test",
-    srcs = glob([
-        "src/main/haxe/**/*.hx",
-        "src/test/haxe/**/*.hx",
-    ]),
+    srcs = glob(["src/test/haxe/**/*.hx"]),
     haxelibs = {"hx3compat": "1.0.3"},
+    deps = ["//:neko-lib"],
 )
 ```
+
+Notice that only the test sources are included here; the library sources actually being tested are brought in through 
+the `//:neko-lib` dependency.  Alternatively you can include the library sources directly in the `srcs` attribute.
 
 ## Generate HXML File
 
@@ -92,6 +116,10 @@ haxe_gen_hxml(
 ```
 
 # Targets
+
+The targets that are currently actively supported are listed below; other targets may work.
+* neko
+* java
 
 ## Java
 
