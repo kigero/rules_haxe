@@ -123,7 +123,22 @@ def _create_hxml_map(ctx, for_test = False):
         name = resource.path
         name = name.replace("src/main/resources/", "")
         name = name.replace("src/test/resources/", "")
-        hxml["resources"][resource.path] = name
+        parts = name.split("/")
+        new_name = ""
+        skip = False
+        for idx in range(len(parts)):
+            if skip:
+                skip = False
+                continue
+            elif parts[idx] == "external":
+                new_name = ""
+                skip = True
+            elif parts[idx] != "":
+                if new_name != "":
+                    new_name += "/"
+                new_name += parts[idx]
+
+        hxml["resources"][resource.path] = new_name
 
     hxml["c-args"] = list()
     if hxml["target"] == "java":
@@ -142,9 +157,9 @@ def _create_hxml_map(ctx, for_test = False):
                 new_classpath = ""
                 for idx in range(len(parts)):
                     if parts[idx] == "external":
-                        new_classpath = "external/"
+                        new_classpath = "external"
                     elif parts[idx] != "":
-                        new_classpath += parts[idx] + "/"
+                        new_classpath += "/" + parts[idx]
 
                 if not new_classpath in hxml["classpaths"]:
                     hxml["classpaths"].append(new_classpath)
