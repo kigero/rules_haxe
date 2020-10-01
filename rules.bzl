@@ -470,14 +470,20 @@ def _haxe_executable_impl(ctx):
         out = output,
     )
 
-    # Post process the output file.
-    output = ctx.actions.declare_file(hxml["output"].replace("-intermediate", ""))
+    # Generate a launcher file.
+    launcher_file = ctx.actions.declare_file("run-{}.bat".format(ctx.attr.name))
+    toolchain.create_run_script(
+        ctx,
+        hxml["target"],
+        output,
+        launcher_file,
+    )
 
     # Figure out the return from the rule.
     rtrn = [
         DefaultInfo(
-            files = depset([output]),
-            runfiles = ctx.runfiles(files = runfiles),
+            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources + toolchain.internal.tools + [output, launcher_file]),
+            executable = launcher_file,
         ),
         HaxeLibraryInfo(
             info = struct(
@@ -519,6 +525,7 @@ def _haxe_executable_impl(ctx):
 haxe_executable = rule(
     doc = "Create a binary.",
     implementation = _haxe_executable_impl,
+    executable = True,
     toolchains = ["@rules_haxe//:toolchain_type"],
     attrs = {
         "executable_name": attr.string(

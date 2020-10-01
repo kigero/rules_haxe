@@ -225,7 +225,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include
 
 def haxe_create_run_script(ctx, target, lib, out):
     """
-    Create a run script usable by Bazel for running the unit tests.
+    Create a run script usable by Bazel for running executables (e.g. unit tests).
     
     Args:
         ctx: Bazel context.
@@ -243,6 +243,7 @@ def haxe_create_run_script(ctx, target, lib, out):
 
     script_content = ""
     if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
+        script_content += "@echo off\n"
         if toolchain.internal.haxe_dir:
             script_content += "SET PATH={};%PATH%\n".format(toolchain.internal.haxe_dir).replace("/", "\\")
         if toolchain.internal.neko_dir:
@@ -256,6 +257,7 @@ def haxe_create_run_script(ctx, target, lib, out):
             script_content += "java -jar java/{}".format(lib_path).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
+        script_content += " %*"
     else:
         if toolchain.internal.haxe_dir:
             script_content += "set PATH={};$PATH\n".format(toolchain.internal.haxe_dir)
@@ -270,6 +272,7 @@ def haxe_create_run_script(ctx, target, lib, out):
             script_content += "java -jar java/{}".format(lib_path)
         else:
             fail("Invalid target {}".format(target))
+        script_content += " \"$@\""
 
     ctx.actions.write(
         output = out,
