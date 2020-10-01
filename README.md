@@ -78,6 +78,20 @@ those targets, allowing a common configuration to be used.
 rather than a build artifact for a specific target.  This speeds up compilation of the downstream targets, and reduces 
 the amount of boilerplate when those downstream projects build for multiple targets.
 
+## Build executable
+
+```
+load("@rules_haxe//:def.bzl", "haxe_library")
+
+haxe_executable(
+    name = "neko-lib",
+    srcs = glob(["src/main/haxe/**/*.hx"]),
+    debug = True,
+    executable_name = "validation",
+    main_class = "com.example.Main"
+)
+```
+
 ## Test
 
 ```
