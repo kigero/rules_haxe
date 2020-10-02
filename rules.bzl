@@ -178,7 +178,7 @@ def _create_hxml_map(ctx, for_test = False):
 
     return hxml
 
-def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
+def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = False):
     """
     Create the build.hxml file based on the input hxml dict.
     
@@ -194,7 +194,7 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = ""):
 
     # Determine if we're in a dependant build, and if so what the correct source root is.
     # This is fairly toxic.
-    if len(hxml["source_files"]) == 0:
+    if for_exec or len(hxml["source_files"]) == 0:
         is_dependent_build = True
         source_root = ""
     else:
@@ -452,14 +452,11 @@ def _haxe_executable_impl(ctx):
     # Build the HXML file.
     hxml = _create_hxml_map(ctx)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
-    _create_build_hxml(ctx, toolchain, hxml, build_file)
+    _create_build_hxml(ctx, toolchain, hxml, build_file, for_exec = True)
     output = ctx.actions.declare_file(hxml["output"])
 
     # Do the compilation.
-    runfiles = []
-    for i, d in enumerate(ctx.attr.srcs):
-        for f in d.files.to_list():
-            runfiles.append(f)
+    runfiles = _find_direct_sources(ctx) + _find_direct_resources(ctx)
 
     toolchain.compile(
         ctx,
@@ -481,7 +478,7 @@ def _haxe_executable_impl(ctx):
     # Figure out the return from the rule.
     rtrn = [
         DefaultInfo(
-            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources + toolchain.internal.tools + [output, launcher_file]),
+            runfiles = ctx.runfiles(files = toolchain.internal.tools + [output, launcher_file]),
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
@@ -747,13 +744,13 @@ def _haxe_project_definition(ctx):
 
     return [
         DefaultInfo(
-            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources),
+            files = depset(direct = ctx.files.srcs + ctx.files.resources),
         ),
         HaxeProjectInfo(
             info = struct(),
             hxml = hxml,
-            srcs = ctx.files.srcs,
-            resources = ctx.files.resources,
+            srcs = ctx.files.srcs if len(ctx.files.srcs) != 0 else _find_direct_sources(ctx),
+            resources = ctx.files.resources if len(ctx.files.resources) != 0 else _find_direct_resources(ctx),
             library_name = ctx.attr.library_name,
             main_class = ctx.attr.main_class,
             deps = depset(
