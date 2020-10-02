@@ -120,13 +120,17 @@ load("@rules_haxe//:def.bzl", "haxe_library", "haxe_gen_hxml")
 haxe_gen_hxml(
     name = "gen-neko-hxml",
     srcs = glob(["src/main/haxe/**/*.hx"]),
-    bazel_workspace_path = "bazel-validation",
     debug = True,
     hxml_name = "build-neko.hxml",
     library_name = "validation",
     target = "neko",
     visibility = ["//visibility:public"]
 )
+```
+You have to provide the path to the `bazel-myproject` symlink on the command line so that the proper relative paths *from
+the symlinked HXML file* can be generated:
+```
+bazel build //:gen-neko-hxml --define=bazel_project_dir=%cd%/bazel-validation
 ```
 
 # Targets
