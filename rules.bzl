@@ -639,7 +639,7 @@ def _haxe_test_impl(ctx):
     test_file = ctx.actions.declare_file("MainTest.hx")
     toolchain.create_test_class(
         ctx,
-        ctx.attr.srcs,
+        ctx.files.srcs,
         test_file,
     )
 
@@ -649,10 +649,14 @@ def _haxe_test_impl(ctx):
     _create_build_hxml(ctx, toolchain, hxml, build_file)
 
     lib = ctx.actions.declare_file(hxml["output"])
+
+    # Do the compilation.
+    runfiles = [test_file] + _find_direct_sources(ctx) + _find_direct_resources(ctx)
+
     toolchain.compile(
         ctx,
         hxml = build_file,
-        runfiles = [test_file] + ctx.files.srcs,
+        runfiles = runfiles,
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
         out = lib,
     )

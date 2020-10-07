@@ -183,9 +183,8 @@ def haxe_create_test_class(ctx, srcs, out):
 
     command += " -p " + toolchain.internal.utils_file.dirname
     command += " --run Utils.hx genMainTest"
-    for i, d in enumerate(srcs):
-        for f in d.files.to_list():
-            command += " " + f.path
+    for f in srcs:
+        command += " " + f.path
     command += " > " + out.path
 
     ctx.actions.run_shell(
