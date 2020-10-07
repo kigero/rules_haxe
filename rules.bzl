@@ -190,6 +190,8 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
         hxml: A dict containing HXML parameters; should be generated from `_create_hxml_map`.
         out_file: The output file that the build.hxml should be written to.
         suffix: Optional suffix to append to the build parameters.
+        for_exec: Whether this build HXML is intended for executing the result of the build; this can ignore some errors
+        that aren't an issue during execution.
     """
 
     # Determine if we're in a dependant build, and if so what the correct source root is.
