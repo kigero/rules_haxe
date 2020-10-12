@@ -870,6 +870,7 @@ def _haxe_gen_hxml(ctx):
     temp_classpaths = []
     for classpath in hxml["classpaths"]:
         new_classpath = _resolve_path(ctx.attr.local_references, bazel_workspace_path, classpath)
+        print(new_classpath)
         temp_classpaths.append(new_classpath)
         if new_classpath.find("external") == -1 and new_classpath.endswith("src/main/haxe"):
             temp_classpaths.append(new_classpath.replace("src/main/haxe", "src/test/haxe"))
@@ -880,6 +881,8 @@ def _haxe_gen_hxml(ctx):
         new_res_path = _resolve_path(ctx.attr.local_references, bazel_workspace_path, resource_path)
         temp_resources[new_res_path] = hxml["resources"][resource_path]
     hxml["resources"] = temp_resources
+
+    hxml["source_files"] = []
 
     build_file_name = ctx.attr.hxml_name if hasattr(ctx.attr, "hxml_name") and ctx.attr.hxml_name != "" else "{}.hxml".format(ctx.attr.name)
     build_file = ctx.actions.declare_file(build_file_name)
