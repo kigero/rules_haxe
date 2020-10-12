@@ -24,6 +24,20 @@ def _find_direct_sources(ctx):
 
     return rtrn
 
+def _find_direct_docsources(ctx):
+    rtrn = []
+    if hasattr(ctx.files, "doc_srcs"):
+        rtrn += ctx.files.doc_srcs
+
+    for dep in ctx.attr.deps:
+        haxe_dep = dep[HaxeProjectInfo]
+        if haxe_dep == None:
+            continue
+        if hasattr(haxe_dep, "doc_srcs"):
+            rtrn += haxe_dep.doc_srcs
+
+    return rtrn
+
 def _find_direct_resources(ctx):
     rtrn = []
     if hasattr(ctx.files, "resources"):
@@ -228,8 +242,6 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
             output += "-Debug"
 
         hxml["output"] = output + ".jar"
-    else:
-        fail("Invalid target '{}'".format(hxml["target"]))
 
     # Debug
     if hxml["debug"] != None:
@@ -357,7 +369,7 @@ def _haxe_library_impl(ctx):
     # Figure out the return from the rule.
     rtrn = [
         DefaultInfo(
-            files = depset([output]),
+            files = depset([output] + _find_direct_sources(ctx)),
             runfiles = ctx.runfiles(files = runfiles),
         ),
         HaxeLibraryInfo(
@@ -750,12 +762,13 @@ def _haxe_project_definition(ctx):
 
     return [
         DefaultInfo(
-            files = depset(direct = ctx.files.srcs + ctx.files.resources),
+            files = depset(direct = ctx.files.srcs + ctx.files.doc_srcs + ctx.files.resources, transitive = [dep[DefaultInfo].files for dep in ctx.attr.deps]),
         ),
         HaxeProjectInfo(
             info = struct(),
             hxml = hxml,
             srcs = ctx.files.srcs if len(ctx.files.srcs) != 0 else _find_direct_sources(ctx),
+            doc_srcs = ctx.files.doc_srcs if len(ctx.files.doc_srcs) != 0 else _find_direct_docsources(ctx),
             resources = ctx.files.resources if len(ctx.files.resources) != 0 else _find_direct_resources(ctx),
             library_name = ctx.attr.library_name,
             main_class = ctx.attr.main_class,
@@ -786,6 +799,10 @@ haxe_project_definition = rule(
             mandatory = True,
             allow_files = True,
             doc = "Haxe source code.",
+        ),
+        "doc_srcs": attr.label_list(
+            allow_files = True,
+            doc = "Extra source files used to document the source code.  Feels like there should be a better way to do this.",
         ),
         "resources": attr.label_list(
             allow_files = True,
@@ -912,6 +929,152 @@ haxe_gen_hxml = rule(
             
             Imagine you're creating a local 
             """,
+        ),
+    },
+)
+
+###############################################################################
+
+def _haxe_dox(ctx):
+    """
+    _haxe_dox implementation.
+    
+    Args:
+        ctx: Bazel context.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    # Build the HXML file.
+    hxml = _create_hxml_map(ctx)
+
+    xml_file = ctx.actions.declare_file("{}.xml".format(hxml["name"]))
+    hxml["target"] = ""
+    hxml["args"].append("--xml {}".format(xml_file.path))
+    hxml["args"].append("-D doc-gen")
+    hxml["libs"]["dox"] = "1.5.0"
+
+    build_file_name = ctx.attr.hxml_name if hasattr(ctx.attr, "hxml_name") and ctx.attr.hxml_name != "" else "{}.hxml".format(ctx.attr.name)
+    build_file = ctx.actions.declare_file(build_file_name)
+    _create_build_hxml(ctx, toolchain, hxml, build_file)
+
+    # Do the compilation.
+    runfiles = _find_direct_sources(ctx) + _find_direct_resources(ctx)
+
+    toolchain.compile(
+        ctx,
+        hxml = build_file,
+        runfiles = runfiles,
+        deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
+        out = xml_file,
+    )
+
+    return [
+        DefaultInfo(
+            files = depset(direct = [xml_file]),
+        ),
+    ]
+
+haxe_dox = rule(
+    doc = "Generate the DOX XML configuration file for a project.",
+    implementation = _haxe_dox,
+    toolchains = ["@rules_haxe//:toolchain_type"],
+    attrs = {
+        "hxml_name": attr.string(
+            doc = "The name of the hxml to create; if not provided the rule name will be used.",
+        ),
+        "library_name": attr.string(
+            doc = "The name of the library to use within the hxml file; if not provided the rule name will be used.",
+        ),
+        "srcs": attr.label_list(
+            allow_files = True,
+            doc = "Haxe source code.  Must be included unless depending on a haxe_project_definition rule or other Haxe project.",
+        ),
+        "haxelibs": attr.string_dict(
+            doc = "A dict of haxelib names to versions or git repositories (either the version or git repo is required) that the library depends on.",
+        ),
+        "debug": attr.bool(
+            doc = "If True, will include the debug flag.",
+        ),
+        "classpaths": attr.string_list(
+            doc = "Any extra classpaths to add to the build file.",
+        ),
+        "deps": attr.label_list(
+            providers = [HaxeLibraryInfo],
+            doc = "Direct dependencies of the library.",
+        ),
+    },
+)
+
+###############################################################################
+
+def _haxe_gen_docs_from_dox(ctx):
+    """
+    _haxe_gen_docs_from_dox implementation.
+    
+    Args:
+        ctx: Bazel context.
+    """
+    archive_path = ctx.actions.declare_file("{}-docs.zip".format(ctx.file.dox_file.basename))
+    path_without_extension = archive_path.path[:-4]
+
+    ctx.actions.run_shell(
+        inputs = [ctx.file.dox_file],
+        outputs = [archive_path],
+        command = "python3 {} {} {} {}".format(ctx.file._postprocess_dox_py.path, ctx.file.dox_file.path, path_without_extension, ctx.attr.root_pkg),
+        mnemonic = "ProcessDox",
+    )
+
+    return [
+        DefaultInfo(
+            files = depset(direct = [archive_path]),
+        ),
+    ]
+
+haxe_gen_docs_from_dox = rule(
+    doc = "Generate java files from a Dox file; this is useful when using a multi-project/language documentation gneerator that doesn't directly support Haxe (e.g. doxygen).",
+    implementation = _haxe_gen_docs_from_dox,
+    attrs = {
+        "dox_file": attr.label(
+            allow_single_file = True,
+            doc = "The path to the dox file to generate from.",
+        ),
+        "root_pkg": attr.string(
+            doc = "Root package to generate documentation for.",
+            default = "*",
+        ),
+        "_postprocess_dox_py": attr.label(
+            allow_single_file = True,
+            doc = "Python file for post processing DOX files.",
+            default = "//:utilities/postprocess_dox.py",
+        ),
+    },
+)
+
+###############################################################################
+
+def _haxe_gather_doc_srcs(ctx):
+    """
+    _haxe_gather_doc_srcs implementation.
+    
+    Args:
+        ctx: Bazel context.
+    """
+    docs = _find_direct_docsources(ctx)
+
+    return [
+        DefaultInfo(
+            files = depset(direct = docs),
+        ),
+    ]
+
+haxe_gather_doc_srcs = rule(
+    doc = "Gather any documentation files defined in the project or its dependencies.",
+    implementation = _haxe_gather_doc_srcs,
+    attrs = {
+        "deps": attr.label_list(
+            mandatory = True,
+            providers = [HaxeLibraryInfo],
+            doc = "Direct dependencies of the library.",
         ),
     },
 )
