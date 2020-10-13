@@ -158,7 +158,7 @@ def findParentComment(types, type, m_desc):
     return None        
 
 dox_path = sys.argv[1]
-archive_path = sys.argv[2]
+out_path = sys.argv[2]
 in_pkg = None if sys.argv[3] == "*" else sys.argv[3]
 packages = None
     
@@ -169,98 +169,94 @@ for node in root:
     type = TypeDesc(node)
     types[type.fqpn] = type
 
-with tempfile.TemporaryDirectory() as out_path:
-    print("out_path: " + out_path)
-    for fqpn in types:
-        if not includePackage(in_pkg, packages, fqpn):
-            continue
-            
-        desc = types[fqpn]
-        pkg_dir = os.path.join(out_path, desc.pkg.replace(".", "/"))
-        os.makedirs(pkg_dir, exist_ok = True)
-        cls_file = os.path.join(pkg_dir, desc.name + ".java")
+for fqpn in types:
+    if not includePackage(in_pkg, packages, fqpn):
+        continue
         
-        with codecs.open(cls_file, "w", "UTF-8") as out:
-            if desc.pkg != "":
-                out.write("package {};\n".format(desc.pkg))
-                
-            if desc.comment != None:
-                out.write("/**\n\t{}\n */\n".format(desc.comment))
-                
-            out.write("private " if desc.is_private else "public ")
-            if desc.type == Type.CLASS:
-                out.write("class")
-            elif desc.type == Type.INTERFACE:
-                out.write("interface")
-            elif desc.type == Type.ENUM:
-                out.write("enum")
-            out.write(" {}".format(desc.name))
-            if len(desc.implements) > 0:
-                out.write(" implements ")
-                first = True
-                for i_type in desc.implements:
-                    if not first:
-                        out.write(", ")
-                    else:
-                        first = False
-                        
-                    out.write(i_type)
-            if len(desc.extends) > 0:
-                out.write(" extends ")
-                first = True
-                for e_type in desc.extends:
-                    if not first:
-                        out.write(", ")
-                    else:
-                        first = False
-                        
-                    out.write(e_type)
-            out.write("{\n")
+    desc = types[fqpn]
+    pkg_dir = os.path.join(out_path, desc.pkg.replace(".", "/"))
+    os.makedirs(pkg_dir, exist_ok = True)
+    cls_file = os.path.join(pkg_dir, desc.name + ".java")
+    
+    with codecs.open(cls_file, "w", "UTF-8") as out:
+        if desc.pkg != "":
+            out.write("package {};\n".format(desc.pkg))
             
-            for idx, m_desc in enumerate(desc.members):
-                if desc.type == Type.ENUM and idx > 0:
-                    out.write(",\n")
-                    
-                comment = m_desc.comment
-                if comment == None:
-                    comment = findParentComment(types, desc, m_desc)
-                if comment != None:
-                    out.write("/**\n\t")
-                    out.write(comment)
-                    out.write("\n */\n")
-                
-                if desc.type == Type.ENUM:
-                    out.write(m_desc.name)
-                    continue
-                    
-                if m_desc.is_override:
-                    out.write("@override ")
-                    
-                out.write("public " if m_desc.is_public else "private ")
-                
-                if m_desc.is_method and m_desc.name == "new":
-                    out.write(desc.name[desc.name.rfind(".") + 1:])
+        if desc.comment != None:
+            out.write("/**\n\t{}\n */\n".format(desc.comment))
+            
+        out.write("private " if desc.is_private else "public ")
+        if desc.type == Type.CLASS:
+            out.write("class")
+        elif desc.type == Type.INTERFACE:
+            out.write("interface")
+        elif desc.type == Type.ENUM:
+            out.write("enum")
+        out.write(" {}".format(desc.name))
+        if len(desc.implements) > 0:
+            out.write(" implements ")
+            first = True
+            for i_type in desc.implements:
+                if not first:
+                    out.write(", ")
                 else:
-                    out.write("{} {}".format(m_desc.return_type, m_desc.name))
+                    first = False
                     
-                if m_desc.is_method:
-                    out.write("(")
-                    first = True
-                    for idx, arg in enumerate(m_desc.args):
-                        if not first:
-                            out.write(", ")
-                        else:
-                            first = False
-                        out.write("{} ".format(arg))
-                        arg_name = m_desc.arg_names[idx]
-                        if arg_name.startswith("?"):
-                            arg_name = arg_name[1:]
-                        out.write(arg_name)
-                    out.write(")")
-                    if desc.type == Type.CLASS:
-                        out.write("{}")
-                out.write(";\n")
+                out.write(i_type)
+        if len(desc.extends) > 0:
+            out.write(" extends ")
+            first = True
+            for e_type in desc.extends:
+                if not first:
+                    out.write(", ")
+                else:
+                    first = False
+                    
+                out.write(e_type)
+        out.write("{\n")
+        
+        for idx, m_desc in enumerate(desc.members):
+            if desc.type == Type.ENUM and idx > 0:
+                out.write(",\n")
                 
-            out.write("}\n")
-
-    shutil.make_archive(archive_path, 'zip', out_path)
+            comment = m_desc.comment
+            if comment == None:
+                comment = findParentComment(types, desc, m_desc)
+            if comment != None:
+                out.write("/**\n\t")
+                out.write(comment)
+                out.write("\n */\n")
+            
+            if desc.type == Type.ENUM:
+                out.write(m_desc.name)
+                continue
+                
+            if m_desc.is_override:
+                out.write("@override ")
+                
+            out.write("public " if m_desc.is_public else "private ")
+            
+            if m_desc.is_method and m_desc.name == "new":
+                out.write(desc.name[desc.name.rfind(".") + 1:])
+            else:
+                out.write("{} {}".format(m_desc.return_type, m_desc.name))
+                
+            if m_desc.is_method:
+                out.write("(")
+                first = True
+                for idx, arg in enumerate(m_desc.args):
+                    if not first:
+                        out.write(", ")
+                    else:
+                        first = False
+                    out.write("{} ".format(arg))
+                    arg_name = m_desc.arg_names[idx]
+                    if arg_name.startswith("?"):
+                        arg_name = arg_name[1:]
+                    out.write(arg_name)
+                out.write(")")
+                if desc.type == Type.CLASS:
+                    out.write("{}")
+            out.write(";\n")
+            
+        out.write("}\n")

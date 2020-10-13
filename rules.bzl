@@ -1016,19 +1016,18 @@ def _haxe_gen_docs_from_dox(ctx):
     Args:
         ctx: Bazel context.
     """
-    archive_path = ctx.actions.declare_file("{}-docs.zip".format(ctx.file.dox_file.basename))
-    path_without_extension = archive_path.path[:-4]
+    out_dir = ctx.actions.declare_directory("{}-docs".format(ctx.file.dox_file.basename))
 
     ctx.actions.run_shell(
         inputs = [ctx.file.dox_file],
-        outputs = [archive_path],
-        command = "python3 {} {} {} {}".format(ctx.file._postprocess_dox_py.path, ctx.file.dox_file.path, path_without_extension, ctx.attr.root_pkg),
+        outputs = [out_dir],
+        command = "python3 {} {} {} {}".format(ctx.file._postprocess_dox_py.path, ctx.file.dox_file.path, out_dir.path, ctx.attr.root_pkg),
         mnemonic = "ProcessDox",
     )
 
     return [
         DefaultInfo(
-            files = depset(direct = [archive_path]),
+            files = depset(direct = [out_dir]),
         ),
     ]
 
