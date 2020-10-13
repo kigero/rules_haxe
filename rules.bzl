@@ -222,26 +222,30 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
     content = ""
 
     # Target
+    hxml["output_dir"] = "{}{}".format(hxml["target"], suffix)
     if hxml["target"] == "neko":
-        content += "--neko {}/{}neko/{}{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["name"], suffix)
-        hxml["output"] = "neko/{}{}.n".format(hxml["name"], suffix)
+        content += "--neko {}/{}{}/{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
+        hxml["output_file"] = "{}.n".format(hxml["name"], suffix)
+    elif hxml["target"] == "python":
+        content += "--python {}/{}{}/{}.py\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
+        hxml["output_file"] = "{}.py".format(hxml["name"], suffix)
     elif hxml["target"] == "java":
-        content += "--java {}/{}java/{}{}\n".format(ctx.var["BINDIR"], source_root, hxml["name"], suffix)
+        content += "--java {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
 
-        output = "java/{}{}".format(hxml["name"], suffix)
+        output = "{}".format(hxml["name"])
         if hxml["main_class"] != None:
             mc = hxml["main_class"]
             if "." in mc:
                 mc = mc[mc.rindex(".") + 1:]
 
-            output += "/{}{}".format(mc, suffix)
+            output += "/{}".format(mc)
         else:
-            output += "/{}{}".format(hxml["name"], suffix)
+            output += "/{}".format(hxml["name"])
 
         if hxml["debug"] != None:
             output += "-Debug"
 
-        hxml["output"] = output + ".jar"
+        hxml["output_file"] = output + ".jar"
 
     # Debug
     if hxml["debug"] != None:
@@ -316,6 +320,67 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
         command = "mv {} {}".format(build_file_1.path, out_file.path),
     )
 
+def _calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None):
+    runfiles = [out_dir]
+    if launcher_file != None:
+        runfiles.append(launcher_file)
+        runfiles += toolchain.internal.tools
+
+    rtrn = [
+        DefaultInfo(
+            files = depset([out_dir] + _find_direct_sources(ctx)),
+            runfiles = ctx.runfiles(files = runfiles),
+            executable = launcher_file,
+        ),
+        HaxeLibraryInfo(
+            info = struct(
+                lib = out_dir,
+            ),
+            hxml = hxml,
+            deps = depset(
+                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
+        HaxeProjectInfo(
+            info = struct(),
+            hxml = hxml,
+            srcs = ctx.files.srcs,
+            resources = ctx.files.resources,
+            library_name = ctx.attr.executable_name if hasattr(ctx.attr, "executable_name") else ctx.attr.library_name,
+            deps = depset(
+                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
+            ),
+        ),
+    ]
+
+    # Create target-specific responses
+    if hxml["target"] == "java":
+        java_out = ctx.actions.declare_file("java-deps/{}/{}".format(hxml["output_dir"], hxml["output_file"]))
+        ctx.actions.run_shell(
+            outputs = [java_out],
+            inputs = [out_dir],
+            command = "cp {}/{} {}".format(out_dir.path, hxml["output_file"], java_out.path),
+            use_default_shell_env = True,
+        )
+
+        java_deps = []
+        for dep in ctx.attr.deps:
+            if hasattr(dep, "JavaInfo"):
+                java_deps.append(dep[JavaInfo])
+        rtrn.append(JavaInfo(
+            output_jar = java_out,
+            compile_jar = java_out,
+            deps = java_deps,
+        ))
+    elif hxml["target"] == "python":
+        rtrn.append(PyInfo(
+            transitive_sources = depset([out_dir]),
+        ))
+
+    return rtrn
+
 ###############################################################################
 
 def _haxe_library_impl(ctx):
@@ -331,7 +396,7 @@ def _haxe_library_impl(ctx):
     hxml = _create_hxml_map(ctx)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
     _create_build_hxml(ctx, toolchain, hxml, build_file, "-intermediate")
-    intermediate = ctx.actions.declare_file(hxml["output"])
+    intermediate = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
     runfiles = []
@@ -348,7 +413,7 @@ def _haxe_library_impl(ctx):
     )
 
     # Post process the output file.
-    output = ctx.actions.declare_file(hxml["output"].replace("-intermediate", ""))
+    output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
 
     if hxml["target"] == "java":
         toolchain.create_final_jar(
@@ -356,58 +421,18 @@ def _haxe_library_impl(ctx):
             _find_direct_sources(ctx),
             intermediate,
             output,
+            hxml["output_file"],
             ctx.attr.strip_haxe,
         )
     else:
         ctx.actions.run_shell(
             outputs = [output],
             inputs = [intermediate],
-            command = "cp {} {}".format(intermediate.path, output.path),
+            command = "cp -r {} {}".format(intermediate.path, output.path),
             use_default_shell_env = True,
         )
 
-    # Figure out the return from the rule.
-    rtrn = [
-        DefaultInfo(
-            files = depset([output] + _find_direct_sources(ctx)),
-            runfiles = ctx.runfiles(files = runfiles),
-        ),
-        HaxeLibraryInfo(
-            info = struct(
-                lib = output,
-            ),
-            hxml = hxml,
-            deps = depset(
-                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
-                transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
-            ),
-        ),
-        HaxeProjectInfo(
-            info = struct(),
-            hxml = hxml,
-            srcs = ctx.files.srcs,
-            resources = ctx.files.resources,
-            library_name = ctx.attr.library_name,
-            deps = depset(
-                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
-                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
-            ),
-        ),
-    ]
-
-    # This allows java targets to use the results of this rule.
-    if hxml["target"] == "java":
-        java_deps = []
-        for dep in ctx.attr.deps:
-            if hasattr(dep, "JavaInfo"):
-                java_deps.append(dep[JavaInfo])
-        rtrn.append(JavaInfo(
-            output_jar = output,
-            compile_jar = output,
-            deps = java_deps,
-        ))
-
-    return rtrn
+    return _calc_provider_response(ctx, toolchain, hxml, output)
 
 haxe_library = rule(
     doc = "Create a library.",
@@ -467,7 +492,7 @@ def _haxe_executable_impl(ctx):
     hxml = _create_hxml_map(ctx)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
     _create_build_hxml(ctx, toolchain, hxml, build_file, for_exec = True)
-    output = ctx.actions.declare_file(hxml["output"])
+    dir = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
     runfiles = _find_direct_sources(ctx) + _find_direct_resources(ctx)
@@ -477,7 +502,7 @@ def _haxe_executable_impl(ctx):
         hxml = build_file,
         runfiles = runfiles,
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
-        out = output,
+        out = dir,
     )
 
     # Generate a launcher file.
@@ -485,52 +510,11 @@ def _haxe_executable_impl(ctx):
     toolchain.create_run_script(
         ctx,
         hxml["target"],
-        output,
+        hxml["output_file"],
         launcher_file,
     )
 
-    # Figure out the return from the rule.
-    rtrn = [
-        DefaultInfo(
-            runfiles = ctx.runfiles(files = toolchain.internal.tools + [output, launcher_file]),
-            executable = launcher_file,
-        ),
-        HaxeLibraryInfo(
-            info = struct(
-                lib = output,
-            ),
-            hxml = hxml,
-            deps = depset(
-                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
-                transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
-            ),
-        ),
-        HaxeProjectInfo(
-            info = struct(),
-            hxml = hxml,
-            srcs = ctx.files.srcs,
-            resources = ctx.files.resources,
-            library_name = ctx.attr.executable_name,
-            deps = depset(
-                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
-                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
-            ),
-        ),
-    ]
-
-    # This allows java targets to use the results of this rule.
-    if hxml["target"] == "java":
-        java_deps = []
-        for dep in ctx.attr.deps:
-            if hasattr(dep, "JavaInfo"):
-                java_deps.append(dep[JavaInfo])
-        rtrn.append(JavaInfo(
-            output_jar = output,
-            compile_jar = output,
-            deps = java_deps,
-        ))
-
-    return rtrn
+    return _calc_provider_response(ctx, toolchain, hxml, dir, launcher_file)
 
 haxe_executable = rule(
     doc = "Create a binary.",
@@ -660,7 +644,7 @@ def _haxe_test_impl(ctx):
     build_file = ctx.actions.declare_file("{}-build-test.hxml".format(ctx.attr.name))
     _create_build_hxml(ctx, toolchain, hxml, build_file)
 
-    lib = ctx.actions.declare_file(hxml["output"])
+    dir = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
     runfiles = [test_file] + _find_direct_sources(ctx) + _find_direct_resources(ctx)
@@ -670,20 +654,20 @@ def _haxe_test_impl(ctx):
         hxml = build_file,
         runfiles = runfiles,
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
-        out = lib,
+        out = dir,
     )
 
     launcher_file = ctx.actions.declare_file("{}-launcher.bat".format(ctx.attr.name))
     toolchain.create_run_script(
         ctx,
         hxml["target"],
-        lib,
+        hxml["output_file"],
         launcher_file,
     )
 
     return [
         DefaultInfo(
-            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [lib, launcher_file]),
+            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [dir, launcher_file]),
             executable = launcher_file,
         ),
         HaxeLibraryInfo(

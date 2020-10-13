@@ -192,15 +192,16 @@ def haxe_create_test_class(ctx, srcs, out):
         command = command,
     )
 
-def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include_sources = True):
+def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True):
     """
     Create the final jar file, which strips out haxe classes and adds source files.
     
     Args:
         ctx: Bazel context.
         srcs: The sources to search for unit test files.
-        intermediate: The intermediate jar file.
-        output: The final jar file.
+        intermediate: The intermediate jar file's directory.
+        output: The final jar file's directory.
+        jar_name: The name of the jar in the intermediate/output directories.
         strip: Strip out haxe classes.
         include_sources: Include the Java sources in the jar.
     """
@@ -211,7 +212,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include
     else:
         command = "haxe"
     command += " -p " + toolchain.internal.utils_file.dirname
-    command += " --run Utils.hx createFinalJar {} {} {} {}".format(intermediate.path, output.path, "true" if strip else "false", "true" if include_sources else "false")
+    command += " --run Utils.hx createFinalJar {}/{} {}/{} {} {}".format(intermediate.path, jar_name, output.path, jar_name, "true" if strip else "false", "true" if include_sources else "false")
     for file in srcs:
         command += " " + file.path
 
@@ -222,19 +223,18 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, strip = True, include
         use_default_shell_env = True,
     )
 
-def haxe_create_run_script(ctx, target, lib, out):
+def haxe_create_run_script(ctx, target, lib_name, out):
     """
     Create a run script usable by Bazel for running executables (e.g. unit tests).
     
     Args:
         ctx: Bazel context.
         target: The target platform.
-        lib: The path to the compiled unit test library.
+        lib_name: The name of the executable.
         out: The path to the run script.  Regardless of the file name, a platform appropriate script will be generated.
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    lib_path = lib.dirname[lib.dirname.rindex("/") + 1:] + "/" + lib.basename
     if toolchain.internal.neko_dir:
         neko_path = toolchain.internal.neko_dir + "/neko"
     else:
@@ -251,9 +251,11 @@ def haxe_create_run_script(ctx, target, lib, out):
             script_content += "SET {}={}\n".format(e, toolchain.internal.env[e]).replace("/", "\\")
 
         if target == "neko":
-            script_content += "{} {}".format(neko_path, lib_path).replace("/", "\\")
+            script_content += "{} {}/{}".format(neko_path, target, lib_name).replace("/", "\\")
         elif target == "java":
-            script_content += "java -jar java/{}".format(lib_path).replace("/", "\\")
+            script_content += "java -jar {}/{}".format(target, lib_name).replace("/", "\\")
+        elif target == "python":
+            script_content += "python {}/{}".format(target, lib_name).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
         script_content += " %*"
@@ -266,9 +268,11 @@ def haxe_create_run_script(ctx, target, lib, out):
             script_content += "set {}={}\n".format(e, toolchain.internal.env[e])
 
         if target == "neko":
-            script_content += "{} {}".format(neko_path, lib_path)
+            script_content += "{} {}/{}".format(neko_path, target, lib_name)
         elif target == "java":
-            script_content += "java -jar java/{}".format(lib_path)
+            script_content += "java -jar {}/{}".format(target, lib_name)
+        elif target == "python":
+            script_content += "python {}/{}".format(target, lib_name)
         else:
             fail("Invalid target {}".format(target))
         script_content += " \"$@\""

@@ -1,3 +1,4 @@
+import haxe.display.Display.DisplayItem;
 import haxe.io.Path;
 import sys.io.File;
 import sys.FileSystem;
@@ -145,6 +146,7 @@ class Utils
 		var input = File.read(intermediatePath);
 		var entries = haxe.zip.Reader.readZip(input);
 
+		sys.FileSystem.createDirectory(haxe.io.Path.directory(outputPath));
 		var out = File.write(outputPath, true);
 		var outZip = new SingleEntryZipWriter(out);
 
