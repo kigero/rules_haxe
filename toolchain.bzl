@@ -161,8 +161,28 @@ def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
         mnemonic = "HaxelibInstall",
     )
 
+    # OK... this is bad.  Really bad.  But I can't find any other way of getting this variable passed through to the
+    # haxe environment.  See the readme for better discussion.  Postprocess the HXCPP install.
+    path_runfiles = []
+    for f in runfiles:
+        path_runfiles.append(f)
+
+    if haxelib == "hxcpp" and ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
+        postprocess_out = ctx.actions.declare_file("haxelib_install_{}_postprocess".format(path_suffix))
+        ctx.actions.run_shell(
+            outputs = [postprocess_out],
+            inputs = [install_out],
+            command = "{} $@".format(toolchain.internal.postprocess_hxcpp_script.path),
+            arguments = [toolchain.internal.env["HAXELIB_PATH"], postprocess_out.path],
+            use_default_shell_env = True,
+            mnemonic = "HaxelibHxcppPostProcess",
+        )
+        path_runfiles.append(postprocess_out)
+    else:
+        path_runfiles.append(install_out)
+
     out = ctx.actions.declare_file("haxelib_path_{}".format(path_suffix))
-    haxe_haxelib_path(ctx, haxelib, version, out, runfiles + [install_out], deps)
+    haxe_haxelib_path(ctx, haxelib, version, out, path_runfiles, deps)
     return out
 
 def haxe_create_test_class(ctx, srcs, out):
@@ -251,16 +271,18 @@ def haxe_create_run_script(ctx, target, lib_name, out):
             script_content += "SET {}={}\n".format(e, toolchain.internal.env[e]).replace("/", "\\")
 
         if target == "neko":
-            script_content += "{} {}/{}".format(neko_path, target, lib_name).replace("/", "\\")
+            script_content += "{} {}/{}".format(neko_path, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "java":
-            script_content += "java -jar {}/{}".format(target, lib_name).replace("/", "\\")
+            script_content += "java -jar {}/{}".format(ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "python":
-            script_content += "python {}/{}".format(target, lib_name).replace("/", "\\")
+            script_content += "python {}/{}".format(ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "php":
             php_ini_var = ""
             if "PHP_INI" in ctx.var:
                 php_ini_var = "-c {}".format(ctx.var["PHP_INI"])
-            script_content += "php {} {}/{}/index.php".format(php_ini_var, target, lib_name).replace("/", "\\")
+            script_content += "php {} {}/{}/index.php".format(php_ini_var, ctx.attr.name, lib_name).replace("/", "\\")
+        elif target == "cpp":
+            script_content += "{}/{}".format(ctx.attr.name, lib_name).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
         script_content += " %*"
@@ -273,13 +295,18 @@ def haxe_create_run_script(ctx, target, lib_name, out):
             script_content += "set {}={}\n".format(e, toolchain.internal.env[e])
 
         if target == "neko":
-            script_content += "{} {}/{}".format(neko_path, target, lib_name)
+            script_content += "{} {}/{}".format(neko_path, ctx.attr.name, lib_name)
         elif target == "java":
-            script_content += "java -jar {}/{}".format(target, lib_name)
+            script_content += "java -jar {}/{}".format(ctx.attr.name, lib_name)
         elif target == "python":
-            script_content += "python {}/{}".format(target, lib_name)
+            script_content += "python {}/{}".format(ctx.attr.name, lib_name)
         elif target == "php":
-            script_content += "php {}/{}".format(target, lib_name).replace("/", "\\")
+            php_ini_var = ""
+            if "PHP_INI" in ctx.var:
+                php_ini_var = "-c {}".format(ctx.var["PHP_INI"])
+            script_content += "php {} {}/{}/index.php".format(php_ini_var, ctx.attr.name, lib_name)
+        elif target == "cpp":
+            script_content += "{}/{}".format(ctx.attr.name, lib_name)
         else:
             fail("Invalid target {}".format(target))
         script_content += " \"$@\""
@@ -305,6 +332,7 @@ def _haxe_toolchain_impl(ctx):
     utils_file = None
     run_haxe_file = None
     haxelib_install_file = None
+    postprocess_hxcpp_script = None
     haxe_dir = None
     neko_dir = None
 
@@ -321,6 +349,8 @@ def _haxe_toolchain_impl(ctx):
             run_haxe_file = f
         if f.path.endswith("/haxelib_install.sh"):
             haxelib_install_file = f
+        if f.path.endswith("/postprocess_hxcpp.sh"):
+            postprocess_hxcpp_script = f
 
     if haxe_cmd:
         haxe_dir = haxe_cmd.dirname
@@ -338,6 +368,8 @@ def _haxe_toolchain_impl(ctx):
         fail("could not locate run_haxe.sh file")
     if not haxelib_install_file:
         fail("could not locate haxelib_install.sh file")
+    if not postprocess_hxcpp_script:
+        fail("could not locate postprocess_hxcpp.sh file")
 
     env = {
         "HAXELIB_PATH": haxelib_file.dirname,
@@ -358,6 +390,7 @@ def _haxe_toolchain_impl(ctx):
             utils_file = utils_file,
             run_haxe_file = run_haxe_file,
             haxelib_install_file = haxelib_install_file,
+            postprocess_hxcpp_script = postprocess_hxcpp_script,
             env = env,
             tools = ctx.files.tools,
         ),

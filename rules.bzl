@@ -110,6 +110,8 @@ def _create_hxml_map(ctx, for_test = False):
     hxml["libs"] = dict()
     if hxml["target"] == "java":
         hxml["libs"]["hxjava"] = "3.2.0"
+    elif hxml["target"] == "cpp":
+        hxml["libs"]["hxcpp"] = "4.1.15"
     if hasattr(ctx.attr, "haxelibs"):
         for lib in ctx.attr.haxelibs:
             version = ctx.attr.haxelibs[lib]
@@ -210,7 +212,7 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
 
     # Determine if we're in a dependant build, and if so what the correct source root is.
     # This is fairly toxic.
-    if for_exec or len(hxml["source_files"]) == 0:
+    if for_exec or len(hxml["source_files"]) == 0 or len(ctx.files.srcs) == 0:
         is_dependent_build = True
         source_root = ""
     else:
@@ -222,7 +224,7 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
     content = ""
 
     # Target
-    hxml["output_dir"] = "{}{}".format(hxml["target"], suffix)
+    hxml["output_dir"] = "{}{}".format(ctx.attr.name, suffix)
     if hxml["target"] == "neko":
         content += "--neko {}/{}{}/{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
         hxml["output_file"] = "{}.n".format(hxml["name"], suffix)
@@ -232,6 +234,22 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
     elif hxml["target"] == "php":
         content += "--php {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
         hxml["output_file"] = "{}".format(hxml["name"], suffix)
+    elif hxml["target"] == "cpp":
+        content += "--cpp {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
+        output = "{}".format(hxml["name"])
+        if hxml["main_class"] != None:
+            mc = hxml["main_class"]
+            if "." in mc:
+                mc = mc[mc.rindex(".") + 1:]
+
+            output += "/{}".format(mc)
+        else:
+            output += "/{}".format(hxml["name"])
+
+        if hxml["debug"] != None:
+            output += "-Debug"
+
+        hxml["output_file"] = output + ".exe"
     elif hxml["target"] == "java":
         content += "--java {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
 

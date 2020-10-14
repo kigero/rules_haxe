@@ -138,6 +138,9 @@ bazel build //:gen-neko-hxml --define=bazel_project_dir=%cd%/bazel-validation
 The targets that are currently actively supported are listed below; other targets may work.
 * neko
 * java
+* php
+* python
+* cpp (at least on windows)
 
 ## Java
 
@@ -148,6 +151,12 @@ You can specify the target java version to compile to by adding a variable defin
 Setting this variable sets the `-source` and `-target` compiler options in the HXML file to the value set.  This
 propagates to dependencies as well, so if you usually compile for Java 11 but you have one pesky deployment target that
 uses Java 1.8, setting this should compile all the dependencies with Java 1.8.
+
+## CPP
+
+On Windows (Linux has not been tested), getting the right MSVC environment can be... problematic.  The HXCPP toolchain bat files that look for the various installations of MSVC tend to look in hardcoded paths, which can make it hard to pass in a variable that works for all situations.  
+* For MSVC 2015 and below, setting `HXCPP_MSVC` to the directory containing either `vsvars32.bat` or `vcvars32.bat` in your environment, and then passing `--action_env=HXCPP_MSVC` either on the command line or in a bazelrc file, should work for both 32 and 64 bit installs.
+* It looks like MSVC 2017 improved on this situation a bit by including a `vswhere` program, which HXCPP utilizes, to locate the installation root of Visual Studio.  The problem with this is that the bat files use the `ProgramFiles(x86)` substitution, which seems to be not a real environment variable but something special done by the batch processor.  This causes issues: HXCPP spawns a new `cmd` shell to examine these variables, and for whatever reason this shell can't process that special variable.  So with MSVC 2017, the capability is there in the bat files, but something with the nightmare that is cmd->bazel->bash->cmd the ability to use the right substitution to find that program is lost.  As it turns out though, if that substitution can be made, HXCPP seems to work properly.  So... the horrible solution that is currently implemented in this project: if the HXCPP haxelib is installed, any bat files in the haxelib's toolchain directory relating to finding MSVC variables are postprocessed to remove the substitution and instead set the default path to this folder.  See the `templates/postprocess_hxcpp.sh` file for the exact command.  Yes, editing files after the fact is terrible, but at this time I don't have a better solution.  The only advantage is that you shouldn't need to pass any special CLI parameters to locate the MSVC installation.  If/when this causes a problem, I'll revisit it then.
 
 # Windows
 
