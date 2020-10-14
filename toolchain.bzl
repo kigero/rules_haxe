@@ -256,6 +256,11 @@ def haxe_create_run_script(ctx, target, lib_name, out):
             script_content += "java -jar {}/{}".format(target, lib_name).replace("/", "\\")
         elif target == "python":
             script_content += "python {}/{}".format(target, lib_name).replace("/", "\\")
+        elif target == "php":
+            php_ini_var = ""
+            if "PHP_INI" in ctx.var:
+                php_ini_var = "-c {}".format(ctx.var["PHP_INI"])
+            script_content += "php {} {}/{}/index.php".format(php_ini_var, target, lib_name).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
         script_content += " %*"
@@ -273,6 +278,8 @@ def haxe_create_run_script(ctx, target, lib_name, out):
             script_content += "java -jar {}/{}".format(target, lib_name)
         elif target == "python":
             script_content += "python {}/{}".format(target, lib_name)
+        elif target == "php":
+            script_content += "php {}/{}".format(target, lib_name).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
         script_content += " \"$@\""

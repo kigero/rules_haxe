@@ -229,6 +229,9 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
     elif hxml["target"] == "python":
         content += "--python {}/{}{}/{}.py\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
         hxml["output_file"] = "{}.py".format(hxml["name"], suffix)
+    elif hxml["target"] == "php":
+        content += "--php {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
+        hxml["output_file"] = "{}".format(hxml["name"], suffix)
     elif hxml["target"] == "java":
         content += "--java {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
 
