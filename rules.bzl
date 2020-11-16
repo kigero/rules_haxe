@@ -75,7 +75,7 @@ def _find_main_class(ctx):
             haxe_dep = dep[HaxeProjectInfo]
             if haxe_dep == None:
                 continue
-            if haxe_dep.main_class != None and haxe_dep.main_class != "":
+            if hasattr(haxe_dep, "main_class") and haxe_dep.main_class != "":
                 return haxe_dep.main_class
 
     return None
