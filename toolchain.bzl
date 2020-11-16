@@ -23,7 +23,7 @@ def _run_haxe(ctx, inputs, output, toolchain, haxe_cmd, mnemonic = None, ignore_
         host = "LIN"
 
     if ignore_output:
-        redirect_output = "/dev/null"
+        redirect_output = "{}.log".format(output.path)
     else:
         redirect_output = output.path
 

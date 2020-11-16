@@ -214,7 +214,7 @@ def _create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = F
     # This is fairly toxic.
     if for_exec or len(hxml["source_files"]) == 0 or len(ctx.files.srcs) == 0:
         is_dependent_build = True
-        source_root = ""
+        source_root = _determine_source_root(hxml["source_files"][0]) if len(hxml["source_files"]) != 0 and len(ctx.files.srcs) == 0 else ""
     else:
         is_dependent_build = hxml["source_files"][0].startswith("external")
         source_root = _determine_source_root(hxml["source_files"][0])
