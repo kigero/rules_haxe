@@ -10,6 +10,18 @@
 # $6: lib
 # $7: version
 
+# It is all too easy for bazel to try launching multiple installation processes at once.  This can be managed somewhat
+# effectively within bazel itself through the use of dependant files, but that gets REALLY hard when you start dealing
+# with dependant haxe projects, where bazel will try to kick off multiple installations of a haxelib in both the primary
+# and dependant projects.  Doing some locking here just to ensure that the processes can't interfere with themselves
+# seems like a reasonable compromise.  It lets bazel launch the processes, but doesn't allow the install code to run in
+# parallel.  Since there's a check early to see if the lib is already installed, it should return pretty quickly if two
+# installs get kicked off at once.
+ME=`basename "$0"`;
+LCK="/tmp/${ME}.LCK";
+exec 8>$LCK;
+flock -x 8;
+
 set -e
 
 if [[ "." != "$1" ]]; then
@@ -45,18 +57,6 @@ shift
 DOTTED_VERSION=$1
 COMMA_VERSION=${DOTTED_VERSION//./,}
 
-# It is all too easy for bazel to try launching multiple installation processes at once.  This can be managed somewhat
-# effectively within bazel itself through the use of dependant files, but that gets REALLY hard when you start dealing
-# with dependant haxe projects, where bazel will try to kick off multiple installations of a haxelib in both the primary
-# and dependant projects.  Doing some locking here just to ensure that the processes can't interfere with themselves
-# seems like a reasonable compromise.  It lets bazel launch the processes, but doesn't allow the install code to run in
-# parallel.  Since there's a check early to see if the lib is already installed, it should return pretty quickly if two
-# installs get kicked off at once.
-ME=`basename "$0"`;
-LCK="/tmp/${ME}.LCK";
-exec 8>$LCK;
-flock -x 8;
-
 # See if this version is already installed.
 haxelib path $DOTTED_LIB:$DOTTED_VERSION > $OUTPUT || EXIT_CODE=$?
 if [[ "$EXIT_CODE" -eq 0 ]]; then
@@ -91,8 +91,9 @@ else
     unzip -qq lib.zip || true
     rm lib.zip
 
-    # Store the haxelib contents in the comma version subdirectory.  It seems that the haxelib.json file is always in this
-    # subdirectory, so use that as a marker to see where things need to be moved.
+    # Store the haxelib contents in the comma version subdirectory.  It seems that the haxelib.json file is always in
+    # this subdirectory, so use that as a marker to see where things need to be moved.  This code WILL have problems if
+    # there are multiple versions of the haxelib trying to be installed.
     echo "Moving contents to versioned subdirectory." >> $OUTPUT
     JSON_PATH=`find | grep haxelib.json`
     JSON_PATH=`dirname $JSON_PATH`
