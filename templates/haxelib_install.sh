@@ -82,22 +82,26 @@ else
     rm -rf $COMMA_VERSION  
 
     # Get the zip file from the haxelib repo.
+    echo "Getting lib: curl -s -L -o lib.zip https://lib.haxe.org/files/3.0/$COMMA_LIB-$COMMA_VERSION.zip" >> $OUTPUT
     curl -s -L -o lib.zip https://lib.haxe.org/files/3.0/$COMMA_LIB-$COMMA_VERSION.zip
 
     # Unzip it.  On windows unzip sometimes has issues with duplicate file names - not sure why - so ignore them if they
     # occur, hoping that a later step will catch the error if there's a real problem.
+    echo "Inflating lib." >> $OUTPUT
     unzip -qq lib.zip || true
     rm lib.zip
 
     # Store the haxelib contents in the comma version subdirectory.  It seems that the haxelib.json file is always in this
     # subdirectory, so use that as a marker to see where things need to be moved.
+    echo "Moving contents to versioned subdirectory." >> $OUTPUT
     JSON_PATH=`find | grep haxelib.json`
     JSON_PATH=`dirname $JSON_PATH`
+    echo "JSON_PATH = $JSON_PATH" >> $OUTPUT
     if [[ "." == "$JSON_PATH" ]]; then
-        mkdir $COMMA_VERSION
-        ls | grep -v $COMMA_VERSION | xargs mv -t $COMMA_VERSION
+        mkdir "$COMMA_VERSION"
+        ls | grep -v "$COMMA_VERSION" | xargs mv -t "$COMMA_VERSION"
     else
-        mv $JSON_PATH $COMMA_VERSION
+        mv $JSON_PATH "$COMMA_VERSION"
     fi
 
     # If there is no .current file, write the current install version to that file.
