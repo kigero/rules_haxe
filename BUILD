@@ -1,3 +1,5 @@
+load(":haxe_rules_test.bzl", "haxe_rules_test_suite")
+
 toolchain_type(
     name = "toolchain_type",
     visibility = ["//visibility:public"],
@@ -6,3 +8,7 @@ toolchain_type(
 exports_files([
     "utilities/postprocess_dox.py",
 ])
+
+haxe_rules_test_suite(
+    name = "haxe_rules_test",
+)
