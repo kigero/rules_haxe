@@ -17,7 +17,7 @@ def _external_module_a_test_impl(ctx):
     target_under_test = analysistest.target_under_test(env)
 
     asserts.equals(env, "external/test-module-a/src/main/haxe/com/a/ModuleA.hx", target_under_test[HaxeLibraryInfo].hxml["source_files"][0])
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-a/neko-lib", target_under_test[HaxeLibraryInfo].info.lib.path)
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-a/neko-lib", target_under_test[HaxeLibraryInfo].lib.path)
 
     return analysistest.end(env)
 
@@ -41,7 +41,7 @@ def _internal_module_a_test_impl(ctx):
     target_under_test = analysistest.target_under_test(env)
 
     asserts.equals(env, "test-resources/standalone/module-a/src/main/haxe/com/a/ModuleA.hx", target_under_test[HaxeLibraryInfo].hxml["source_files"][0])
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/module-a-lib", target_under_test[HaxeLibraryInfo].info.lib.path)
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/module-a-lib", target_under_test[HaxeLibraryInfo].lib.path)
 
     return analysistest.end(env)
 
@@ -77,7 +77,7 @@ def _haxe_library_dependency_test_impl(ctx):
     hxml = target_under_test[HaxeLibraryInfo].hxml
     asserts.equals(env, 2, len(hxml["source_files"]))
     asserts.equals(env, "module-lib-intermediate", hxml["output_dir"])
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-dist/module-lib", target_under_test[HaxeLibraryInfo].info.lib.path)
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-dist/module-lib", target_under_test[HaxeLibraryInfo].lib.path)
     asserts.equals(env, "external/test-module-a/", determine_source_root(hxml["source_files"][0]))
 
     return analysistest.end(env)
@@ -103,7 +103,7 @@ def _haxe_executable_dependency_test_impl(ctx):
     hxml = target_under_test[HaxeLibraryInfo].hxml
     asserts.equals(env, 2, len(hxml["source_files"]))
     asserts.equals(env, "module-bin", hxml["output_dir"])
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-dist/module-bin", target_under_test[HaxeLibraryInfo].info.lib.path)
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-dist/module-bin", target_under_test[HaxeLibraryInfo].lib.path)
     asserts.equals(env, "external/test-module-a/", determine_source_root(hxml["source_files"][0]))
 
     return analysistest.end(env)

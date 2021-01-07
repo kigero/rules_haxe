@@ -3,11 +3,11 @@ load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
 def determine_source_root(path):
     """
     Determine the source root for a given path, based on whether the path is in the external directory.
-    
+
     Args:
         path: The path to check.
-        
-    Returns: 
+
+    Returns:
         The source root for the path.
     """
     source_root = ""
@@ -20,11 +20,11 @@ def determine_source_root(path):
 def find_direct_sources(ctx):
     """
     Finds the direct sources of the given context.
-    
+
     Args:
         ctx: The bazel context.
-        
-    Returns: 
+
+    Returns:
         An array of source files.
     """
     rtrn = []
@@ -43,11 +43,11 @@ def find_direct_sources(ctx):
 def find_direct_docsources(ctx):
     """
     Finds the direct document sources of the given context.
-    
+
     Args:
         ctx: The bazel context.
-        
-    Returns: 
+
+    Returns:
         An array of document source files.
     """
     rtrn = []
@@ -66,11 +66,11 @@ def find_direct_docsources(ctx):
 def find_direct_resources(ctx):
     """
     Finds the direct resources of the given context.
-    
+
     Args:
         ctx: The bazel context.
-        
-    Returns: 
+
+    Returns:
         An array of resource files.
     """
     rtrn = []
@@ -89,11 +89,11 @@ def find_direct_resources(ctx):
 def find_library_name(ctx):
     """
     Determines the library name, taking into account any dependent HaxeProjectInfos.
-    
+
     Args:
         ctx: The bazel context.
-        
-    Returns: 
+
+    Returns:
         The specified library name.
     """
     if hasattr(ctx.attr, "library_name") and ctx.attr.library_name != "":
@@ -113,11 +113,11 @@ def find_library_name(ctx):
 def find_main_class(ctx):
     """
     Determines the main class, taking into account any dependant HaxeProjectInfos.
-    
+
     Args:
         ctx: The bazel context.
-        
-    Returns: 
+
+    Returns:
         The specified main class.
     """
     if hasattr(ctx.attr, "main_class") and ctx.attr.main_class != "":
@@ -135,11 +135,11 @@ def find_main_class(ctx):
 def create_hxml_map(ctx, for_test = False):
     """
     Create a dict containing haxe build parameters based on the input attributes from the calling rule.
-    
+
     Args:
         ctx: Bazel context.
         for_test: True if build parameters for unit testing should be added, False otherwise.
-        
+
     Returns:
         A dict containing the HXML properties.
     """
@@ -252,9 +252,9 @@ def create_hxml_map(ctx, for_test = False):
 def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = False):
     """
     Create the build.hxml file based on the input hxml dict.
-    
+
     Any Haxelibs that are specified in the hxml will be installed at this time.
-    
+
     Args:
         ctx: Bazel context.
         toolchain: The Haxe toolchain instance.
@@ -262,7 +262,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         out_file: The output file that the build.hxml should be written to.
         suffix: Optional suffix to append to the build parameters.
         for_exec: Whether this build HXML is intended for executing the result of the build; this can ignore some errors
-        that aren't an issue during execution.
+            that aren't an issue during execution.
     """
 
     # Determine if we're in a dependant build, and if so what the correct source root is.
@@ -402,15 +402,15 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None):
     """
     Determine an appropriate provider response based on the input context and the compilation target.
-    
+
     Args:
         ctx: The bazel context.
         toolchain: The Haxe toolchain.
         hxml: The HXML dictionary.
         out_dir: The output directory.
-        launcher_file: The launchar file to run, if there is one.
-        
-    Returns: 
+        launcher_file: The launcher file to run, if there is one.
+
+    Returns:
         An array of providers.
     """
     runfiles = [out_dir]
@@ -425,23 +425,20 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None):
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
-            info = struct(
-                lib = out_dir,
-            ),
+            lib = out_dir,
             hxml = hxml,
             deps = depset(
-                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
+                direct = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
             ),
         ),
         HaxeProjectInfo(
-            info = struct(),
             hxml = hxml,
             srcs = ctx.files.srcs,
             resources = ctx.files.resources,
             library_name = ctx.attr.executable_name if hasattr(ctx.attr, "executable_name") else ctx.attr.library_name,
             deps = depset(
-                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
             ),
         ),

@@ -369,7 +369,6 @@ def _haxe_project_definition(ctx):
             files = depset(direct = ctx.files.srcs + ctx.files.doc_srcs + ctx.files.resources, transitive = [dep[DefaultInfo].files for dep in ctx.attr.deps]),
         ),
         HaxeProjectInfo(
-            info = struct(),
             hxml = hxml,
             srcs = ctx.files.srcs if len(ctx.files.srcs) != 0 else find_direct_sources(ctx),
             doc_srcs = ctx.files.doc_srcs if len(ctx.files.doc_srcs) != 0 else find_direct_docsources(ctx),
@@ -377,15 +376,14 @@ def _haxe_project_definition(ctx):
             library_name = ctx.attr.library_name,
             main_class = ctx.attr.main_class,
             deps = depset(
-                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
             ),
         ),
         HaxeLibraryInfo(
-            info = struct(),
             hxml = hxml,
             deps = depset(
-                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
+                direct = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
             ),
         ),
@@ -530,11 +528,7 @@ haxe_gen_hxml = rule(
             doc = "Direct dependencies of the library.",
         ),
         "local_references": attr.string_dict(
-            doc = """
-            A list of directories that should use local references instead of 'external' references.
-            
-            Imagine you're creating a local 
-            """,
+            doc = "A list of directories that should use local references instead of 'external' references.",
         ),
     },
 )

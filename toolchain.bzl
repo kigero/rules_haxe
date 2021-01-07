@@ -56,8 +56,8 @@ def haxe_compile(ctx, hxml, out, runfiles = None, deps = []):
 
     inputs = [hxml] + toolchain.internal.tools
     for dep in deps:
-        if hasattr(dep.info, "lib"):
-            inputs.append(dep.info.lib)
+        if hasattr(dep, "lib"):
+            inputs.append(dep.lib)
 
     if runfiles != None:
         inputs += runfiles
