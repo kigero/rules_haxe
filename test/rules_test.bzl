@@ -3,9 +3,9 @@ Unit tests.
 """
 
 load("@bazel_skylib//lib:unittest.bzl", "analysistest", "asserts")
-load(":providers.bzl", "HaxeLibraryInfo")
-load(":utils.bzl", "determine_source_root")
-load(":def.bzl", "haxe_library")
+load("//:providers.bzl", "HaxeLibraryInfo")
+load("//:utils.bzl", "determine_source_root")
+load("//:def.bzl", "haxe_library")
 
 ###############################################################################
 # Test that the build parameters for an external module are computed correctly.  Since the external module is defined
@@ -16,7 +16,7 @@ def _external_module_a_test_impl(ctx):
 
     target_under_test = analysistest.target_under_test(env)
 
-    asserts.equals(env, "external/test-module-a/src/main/haxe/com/a/ModuleA.hx", target_under_test[HaxeLibraryInfo].hxml["source_files"][0])
+    asserts.equals(env, ["external/test-module-a/src/main/haxe/com/a/ModuleA.hx"], target_under_test[HaxeLibraryInfo].hxml["source_files"])
     asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-a/neko-lib", target_under_test[HaxeLibraryInfo].lib.path)
 
     return analysistest.end(env)
@@ -40,8 +40,8 @@ def _internal_module_a_test_impl(ctx):
 
     target_under_test = analysistest.target_under_test(env)
 
-    asserts.equals(env, "test-resources/standalone/module-a/src/main/haxe/com/a/ModuleA.hx", target_under_test[HaxeLibraryInfo].hxml["source_files"][0])
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/module-a-lib", target_under_test[HaxeLibraryInfo].lib.path)
+    asserts.equals(env, ["test/standalone/module-a/src/main/haxe/com/a/ModuleA.hx"], target_under_test[HaxeLibraryInfo].hxml["source_files"])
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/test/module-a-lib", target_under_test[HaxeLibraryInfo].lib.path)
 
     return analysistest.end(env)
 
@@ -50,7 +50,7 @@ internal_module_a_test = analysistest.make(_internal_module_a_test_impl)
 def _test_internal_module_a():
     haxe_library(
         name = "module-a-lib",
-        srcs = native.glob(["test-resources/standalone/module-a/src/main/haxe/**/*.hx"]),
+        srcs = native.glob(["standalone/module-a/src/main/haxe/**/*.hx"]),
         debug = True,
         tags = ["manual"],
     )

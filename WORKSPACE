@@ -42,15 +42,15 @@ stardoc_repositories()
 # Unit test repositories.
 local_repository(
     name = "test-module-a",
-    path = "test-resources/packages/module-a",
+    path = "test/packages/module-a",
 )
 
 local_repository(
     name = "test-module-b",
-    path = "test-resources/packages/module-b",
+    path = "test/packages/module-b",
 )
 
 local_repository(
     name = "test-module-dist",
-    path = "test-resources/packages/module-dist",
+    path = "test/packages/module-dist",
 )

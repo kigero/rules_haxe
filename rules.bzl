@@ -291,21 +291,18 @@ def _haxe_test_impl(ctx):
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
-            info = struct(
-            ),
             deps = depset(
-                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
+                direct = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
             ),
         ),
         HaxeProjectInfo(
-            info = struct(),
             hxml = hxml,
             srcs = ctx.files.srcs,
             resources = ctx.files.resources,
             library_name = ctx.attr.name,
             deps = depset(
-                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
+                direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
             ),
         ),
