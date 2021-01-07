@@ -1,0 +1,19 @@
+local_repository(
+    name = "rules_haxe",
+    path = "../../",
+)
+
+local_repository(
+    name = "test-module-a",
+    path = "../module-a",
+)
+
+load("@rules_haxe//:def.bzl", "haxe_download_windows_amd64")
+
+haxe_download_windows_amd64(
+    name = "haxe_windows_amd64",
+)
+
+register_toolchains(
+    "@haxe_windows_amd64//:toolchain",
+)

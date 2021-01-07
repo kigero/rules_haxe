@@ -236,7 +236,7 @@ def create_hxml_map(ctx, for_test = False):
                 if not new_classpath in hxml["classpaths"]:
                     hxml["classpaths"].append(new_classpath)
             else:
-                hxml["classpaths"].append("{}{}".format(determine_source_root(dep_hxml["source_files"][0]), classpath))
+                hxml["classpaths"].append("{}{}".format(determine_source_root(dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else "", classpath))
         for lib in dep_hxml["libs"]:
             if not lib in hxml["libs"]:
                 hxml["libs"][lib] = dep_hxml["libs"][lib]

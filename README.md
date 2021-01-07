@@ -169,3 +169,8 @@ build --enable_runfiles --action_env=ComSpec --action_env=USERPROFILE
 test --action_env=ComSpec --action_env=USERPROFILE
 ```
 Unfortunately the variable specified in `--action_env` is case sensitive; if you have a few different environments that provide an environment variable in different cases (e.g. CMD vs Cygin) it appears you can just pass the parameter twice in the .bazelrc.
+
+# Unit Tests
+
+Unit tests of the rules can be executed with:
+`bazel test //:haxe_rules_test`

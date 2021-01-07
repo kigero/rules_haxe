@@ -24,3 +24,18 @@ http_archive(
 load("@bazel_skylib//:workspace.bzl", "bazel_skylib_workspace")
 
 bazel_skylib_workspace()
+
+local_repository(
+    name = "test-module-a",
+    path = "test-resources/packages/module-a",
+)
+
+local_repository(
+    name = "test-module-b",
+    path = "test-resources/packages/module-b",
+)
+
+local_repository(
+    name = "test-module-dist",
+    path = "test-resources/packages/module-dist",
+)

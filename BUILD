@@ -1,4 +1,4 @@
-load(":haxe_rules_test.bzl", "haxe_rules_test_suite")
+load(":rules_test.bzl", "haxe_rules_test_suite")
 
 toolchain_type(
     name = "toolchain_type",
