@@ -5,8 +5,6 @@ chance it won't work.
 
 Based on the simple Go example [here](https://github.com/jayconrod/rules_go_simple).
 
-Currently supports the neko and java targets.
-
 On Windows, CYGWIN is required!  This is due to the use of `run_shell`, which calls a bash environment.  At this point
 there isn't a better way to set the environment needed for Haxe to run properly.  
 
