@@ -317,6 +317,15 @@ def haxe_create_run_script(ctx, target, lib_name, out):
         is_executable = True,
     )
 
+def haxe_postprocess_dox(ctx, out_dir):
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+    ctx.actions.run_shell(
+        inputs = [toolchain.internal.postprocess_dox_tool, ctx.file.dox_file],
+        outputs = [out_dir],
+        command = "{} {} {} {}".format(toolchain.internal.postprocess_dox_tool.path, ctx.file.dox_file.path, out_dir.path, ctx.attr.root_pkg),
+        mnemonic = "ProcessDox",
+    )
+
 def _haxe_toolchain_impl(ctx):
     """
     Haxe toolchain implementation.
@@ -335,6 +344,7 @@ def _haxe_toolchain_impl(ctx):
     postprocess_hxcpp_script = None
     haxe_dir = None
     neko_dir = None
+    postprocess_dox_tool = None
 
     for f in ctx.files.tools:
         if f.path.endswith("/haxe") or f.path.endswith("/haxe.exe"):
@@ -351,6 +361,8 @@ def _haxe_toolchain_impl(ctx):
             haxelib_install_file = f
         if f.path.endswith("/postprocess_hxcpp.sh"):
             postprocess_hxcpp_script = f
+        if f.path.endswith("/postprocess_dox") or f.path.endswith("/postprocess_dox.exe"):
+            postprocess_dox_tool = f
 
     if haxe_cmd:
         haxe_dir = haxe_cmd.dirname
@@ -370,6 +382,8 @@ def _haxe_toolchain_impl(ctx):
         fail("could not locate haxelib_install.sh file")
     if not postprocess_hxcpp_script:
         fail("could not locate postprocess_hxcpp.sh file")
+    if not postprocess_dox_tool:
+        fail("could not locate postprocess_dox_tool")
 
     env = {
         "HAXELIB_PATH": haxelib_file.dirname,
@@ -382,6 +396,7 @@ def _haxe_toolchain_impl(ctx):
         create_test_class = haxe_create_test_class,
         create_run_script = haxe_create_run_script,
         create_final_jar = haxe_create_final_jar,
+        postprocess_dox = haxe_postprocess_dox,
 
         # Internal data. Contents may change without notice.
         internal = struct(
@@ -391,6 +406,7 @@ def _haxe_toolchain_impl(ctx):
             run_haxe_file = run_haxe_file,
             haxelib_install_file = haxelib_install_file,
             postprocess_hxcpp_script = postprocess_hxcpp_script,
+            postprocess_dox_tool = postprocess_dox_tool,
             env = env,
             tools = ctx.files.tools,
         ),

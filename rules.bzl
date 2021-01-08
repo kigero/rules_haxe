@@ -603,7 +603,6 @@ haxe_dox = rule(
 )
 
 ###############################################################################
-
 def _haxe_gen_docs_from_dox(ctx):
     """
     _haxe_gen_docs_from_dox implementation.
@@ -612,13 +611,9 @@ def _haxe_gen_docs_from_dox(ctx):
         ctx: Bazel context.
     """
     out_dir = ctx.actions.declare_directory("{}-docs".format(ctx.file.dox_file.basename))
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    ctx.actions.run_shell(
-        inputs = [ctx.file.dox_file],
-        outputs = [out_dir],
-        command = "python3 {} {} {} {}".format(ctx.file._postprocess_dox_py.path, ctx.file.dox_file.path, out_dir.path, ctx.attr.root_pkg),
-        mnemonic = "ProcessDox",
-    )
+    toolchain.postprocess_dox(ctx, out_dir)
 
     return [
         DefaultInfo(
@@ -629,6 +624,7 @@ def _haxe_gen_docs_from_dox(ctx):
 haxe_gen_docs_from_dox = rule(
     doc = "Generate java files from a Dox file; this is useful when using a multi-project/language documentation gneerator that doesn't directly support Haxe (e.g. doxygen).",
     implementation = _haxe_gen_docs_from_dox,
+    toolchains = ["@rules_haxe//:toolchain_type"],
     attrs = {
         "dox_file": attr.label(
             allow_single_file = True,
@@ -637,11 +633,6 @@ haxe_gen_docs_from_dox = rule(
         "root_pkg": attr.string(
             doc = "Root package to generate documentation for.",
             default = "*",
-        ),
-        "_postprocess_dox_py": attr.label(
-            allow_single_file = True,
-            doc = "Python file for post processing DOX files.",
-            default = "//:utilities/postprocess_dox.py",
         ),
     },
 )

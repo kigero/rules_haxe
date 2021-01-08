@@ -7,7 +7,8 @@ Based on the simple Go example [here](https://github.com/jayconrod/rules_go_simp
 
 A shell environment on Windows is required, due to the use of `run_shell`, which calls a bash environment.  At this
 point there isn't a better way to set the environment needed for Haxe to run properly.  Either cygwin or minGW bash
-(provided by Git for Windows) should work.  If needed, set an explicit shell with the BAZEL_SH environment variable.
+(provided by Git for Windows) should work, but if you have one or both on your path it can cause problems.  If needed,
+set an explicit shell with the BAZEL_SH environment variable.
 
 The haxelib directory is in the same directory as the downloaded Haxe distribution; this allows haxelibs to be reused
 across builds within the same project.  This also means that currently sandboxing is not supported - if every process
