@@ -181,68 +181,6 @@ haxe_executable = rule(
 
 ###############################################################################
 
-def _haxelib_install_impl(ctx):
-    """
-    haxelib_install implementation.
-
-    Args:
-        ctx: Bazel context.
-    """
-    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
-
-    out_file = ctx.actions.declare_file("out.txt")
-
-    toolchain.haxelib_install(
-        ctx,
-        ctx.attr.haxelib,
-        ctx.attr.version,
-        out_file,
-    )
-
-    return [
-        DefaultInfo(
-            files = depset([out_file]),
-            runfiles = ctx.runfiles(collect_data = True),
-        ),
-        HaxeLibraryInfo(
-            info = struct(
-                out_file = out_file,
-            ),
-            deps = depset(
-                direct = [dep[HaxeLibraryInfo].info for dep in ctx.attr.deps],
-                transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
-            ),
-        ),
-        HaxeProjectInfo(
-            info = struct(),
-            deps = depset(
-                direct = [dep[HaxeProjectInfo].info for dep in ctx.attr.deps],
-                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
-            ),
-        ),
-    ]
-
-haxelib_install = rule(
-    doc = "Install a haxelib.",
-    implementation = _haxelib_install_impl,
-    toolchains = ["@rules_haxe//:toolchain_type"],
-    attrs = {
-        "haxelib": attr.string(
-            mandatory = True,
-            doc = "The haxelib to install.",
-        ),
-        "version": attr.string(
-            doc = "The version or git repository of the haxelib to install.",
-        ),
-        "deps": attr.label_list(
-            providers = [HaxeLibraryInfo],
-            doc = "Direct dependencies of the library",
-        ),
-    },
-)
-
-###############################################################################
-
 def _haxe_test_impl(ctx):
     """
     haxe_test implementation.
