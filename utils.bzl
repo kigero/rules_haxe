@@ -1,3 +1,7 @@
+"""
+Haxe utility functions.
+"""
+
 load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
 
 def determine_source_root(path):
@@ -16,6 +20,15 @@ def determine_source_root(path):
         if parts[idx] == "external":
             source_root += "external/{}/".format(parts[idx + 1])
     return source_root
+
+def _determine_classpath(classpaths, path):
+    classpath = determine_source_root(path)
+    if classpath == "":
+        for cp in classpaths:
+            cp_idx = path.find(cp)
+            if cp_idx > 0:
+                classpath = path[0:cp_idx]
+    return classpath
 
 def find_direct_sources(ctx):
     """
@@ -236,7 +249,7 @@ def create_hxml_map(ctx, for_test = False):
                 if not new_classpath in hxml["classpaths"]:
                     hxml["classpaths"].append(new_classpath)
             else:
-                hxml["classpaths"].append("{}{}".format(determine_source_root(dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else "", classpath))
+                hxml["classpaths"].append("{}{}".format(_determine_classpath(dep_hxml["classpaths"], dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else "", classpath))
         for lib in dep_hxml["libs"]:
             if not lib in hxml["libs"]:
                 hxml["libs"][lib] = dep_hxml["libs"][lib]
