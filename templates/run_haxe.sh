@@ -22,7 +22,7 @@ shift
 export LIN_HAXELIB_PATH=`pwd`/$1
 shift
 
-# On Windows+cygwin the haxelib path has to actually be the windows path, as haxelib spawns a windows command shell.  
+# On Windows+[cygwin|mingw] the haxelib path has to actually be the windows path, as haxelib spawns a windows command shell.  
 # cmd->bazel->bash->haxelib->cmd - fantastic.
 if [[ "WIN" == "$1" ]]; then
     export HAXELIB_PATH=`cygpath -w $LIN_HAXELIB_PATH`

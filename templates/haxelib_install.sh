@@ -16,11 +16,31 @@
 # and dependant projects.  Doing some locking here just to ensure that the processes can't interfere with themselves
 # seems like a reasonable compromise.  It lets bazel launch the processes, but doesn't allow the install code to run in
 # parallel.  Since there's a check early to see if the lib is already installed, it should return pretty quickly if two
-# installs get kicked off at once.
-ME=`basename "$0"`;
-LCK="/tmp/${ME}.LCK";
-exec 8>$LCK;
-flock -x 8;
+# installs get kicked off at once. To support shell environments without flock (like mingw's bash, which comes with
+# Git), this uses a solution with a directory as the lock file.  There are definitely cases where this can fail, but in
+# those cases a bazel clean should make things work again.
+
+LOCKDIR="`realpath $0`.lock"
+trap "rmdir $LOCKDIR" EXIT
+i="1"
+# Wait at most 120 seconds.
+while [ $i -lt 120 ]
+do
+    if mkdir $LOCKDIR 2> /dev/null
+    then
+        break
+    else
+        sleep 1
+    fi
+    i=$[$i+1]
+done
+
+if [ $i -gt 119 ]
+then
+    trap "" EXIT
+    echo "Timed out waiting for lock."
+    exit 1
+fi
 
 set -e
 
@@ -35,9 +55,10 @@ fi
 shift
 
 export LIN_HAXELIB_PATH=`pwd`/$1
+export LIN_HAXELIB_PATH=${LIN_HAXELIB_PATH/cygdrive\//}
 shift
 
-# On Windows+cygwin the haxelib path has to actually be the windows path, as haxelib spawns a windows command shell.  
+# On Windows+[cygwin|mingw] the haxelib path has to actually be the windows path, as haxelib spawns a windows command shell.  
 # cmd->bazel->bash->haxelib->cmd - fantastic.
 if [[ "WIN" == "$1" ]]; then
     export HAXELIB_PATH=`cygpath -w $LIN_HAXELIB_PATH`
@@ -45,7 +66,6 @@ else
     export HAXELIB_PATH=$LIN_HAXELIB_PATH
 fi
 shift
-
 OUTPUT=`pwd`/$1
 shift
 
@@ -56,7 +76,6 @@ shift
 
 DOTTED_VERSION=$1
 COMMA_VERSION=${DOTTED_VERSION//./,}
-
 # See if this version is already installed.
 haxelib path $DOTTED_LIB:$DOTTED_VERSION > $OUTPUT || EXIT_CODE=$?
 if [[ "$EXIT_CODE" -eq 0 ]]; then
@@ -69,7 +88,7 @@ cd $LIN_HAXELIB_PATH
 # Create the comma version of the library name if needed.
 mkdir -p $COMMA_LIB
 cd $COMMA_LIB
-    
+
 if [[ $DOTTED_VERSION == "git:"* ]]; then
     git clone ${DOTTED_VERSION:4} git
 
@@ -84,7 +103,7 @@ else
     # Get the zip file from the haxelib repo.
     echo "Getting lib: curl -s -L -o lib.zip https://lib.haxe.org/files/3.0/$COMMA_LIB-$COMMA_VERSION.zip" >> $OUTPUT
     curl -s -L -o lib.zip https://lib.haxe.org/files/3.0/$COMMA_LIB-$COMMA_VERSION.zip
-
+    
     # Unzip it.  On windows unzip sometimes has issues with duplicate file names - not sure why - so ignore them if they
     # occur, hoping that a later step will catch the error if there's a real problem.
     echo "Inflating lib." >> $OUTPUT
