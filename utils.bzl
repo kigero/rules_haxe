@@ -296,45 +296,46 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
     hxml["output_dir"] = "{}{}".format(ctx.attr.name, suffix)
     hxml["build_file"] = "{}/{}{}/{}".format(ctx.var["BINDIR"], package, hxml["output_dir"], hxml["name"])
     ext = ""
-    if hxml["target"] == "neko":
-        ext = ".n"
-        hxml["output_file"] = "{}.n".format(hxml["name"], suffix)
-    elif hxml["target"] == "python":
-        ext = ".py"
-        hxml["output_file"] = "{}.py".format(hxml["name"], suffix)
-    elif hxml["target"] == "php":
-        hxml["output_file"] = "{}".format(hxml["name"], suffix)
-    elif hxml["target"] == "cpp":
-        output = "{}".format(hxml["name"])
-        if hxml["main_class"] != None:
-            mc = hxml["main_class"]
-            if "." in mc:
-                mc = mc[mc.rindex(".") + 1:]
+    if hxml["target"] != "":
+        if hxml["target"] == "neko":
+            ext = ".n"
+            hxml["output_file"] = "{}.n".format(hxml["name"], suffix)
+        elif hxml["target"] == "python":
+            ext = ".py"
+            hxml["output_file"] = "{}.py".format(hxml["name"], suffix)
+        elif hxml["target"] == "php":
+            hxml["output_file"] = "{}".format(hxml["name"], suffix)
+        elif hxml["target"] == "cpp":
+            output = "{}".format(hxml["name"])
+            if hxml["main_class"] != None:
+                mc = hxml["main_class"]
+                if "." in mc:
+                    mc = mc[mc.rindex(".") + 1:]
 
-            output += "/{}".format(mc)
-        else:
-            output += "/{}".format(hxml["name"])
+                output += "/{}".format(mc)
+            else:
+                output += "/{}".format(hxml["name"])
 
-        if hxml["debug"] != None:
-            output += "-Debug"
+            if hxml["debug"] != None:
+                output += "-Debug"
 
-        hxml["output_file"] = output + ".exe"
-    elif hxml["target"] == "java":
-        output = "{}".format(hxml["name"])
-        if hxml["main_class"] != None:
-            mc = hxml["main_class"]
-            if "." in mc:
-                mc = mc[mc.rindex(".") + 1:]
+            hxml["output_file"] = output + ".exe"
+        elif hxml["target"] == "java":
+            output = "{}".format(hxml["name"])
+            if hxml["main_class"] != None:
+                mc = hxml["main_class"]
+                if "." in mc:
+                    mc = mc[mc.rindex(".") + 1:]
 
-            output += "/{}".format(mc)
-        else:
-            output += "/{}".format(hxml["name"])
+                output += "/{}".format(mc)
+            else:
+                output += "/{}".format(hxml["name"])
 
-        if hxml["debug"] != None:
-            output += "-Debug"
+            if hxml["debug"] != None:
+                output += "-Debug"
 
-        hxml["output_file"] = output + ".jar"
-    content += "--{} {}{}\n".format(hxml["target"], hxml["build_file"], ext)
+            hxml["output_file"] = output + ".jar"
+        content += "--{} {}{}\n".format(hxml["target"], hxml["build_file"], ext)
 
     # Debug
     if hxml["debug"] != None:
