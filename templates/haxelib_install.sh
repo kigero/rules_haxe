@@ -54,8 +54,13 @@ if [[ "." != "$1" ]]; then
 fi
 shift
 
+UNAME=`uname -a`
+
 export LIN_HAXELIB_PATH=`pwd`/$1
-export LIN_HAXELIB_PATH=${LIN_HAXELIB_PATH/cygdrive\//}
+# MinGW shells sometimes get 'cygdrive' in their paths, not sure why.
+if [[ $UNAME == *"MINGW"* ]]; then
+    export LIN_HAXELIB_PATH=${LIN_HAXELIB_PATH/cygdrive\//}
+fi
 shift
 
 # On Windows+[cygwin|mingw] the haxelib path has to actually be the windows path, as haxelib spawns a windows command shell.  
