@@ -1,7 +1,7 @@
 package com.b;
 
 import haxe.display.JsonModuleTypes;
-import com.a.A;
+import com.a.ModuleA;
 
 class ModuleB
 {
