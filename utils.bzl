@@ -265,19 +265,15 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
             that aren't an issue during execution.
     """
 
-    # Determine if we're in a dependant build, and if so what the correct source root is.
-    # This is fairly toxic.
+    # Determine if we're in a dependant build.
     if for_exec or len(hxml["source_files"]) == 0 or len(ctx.files.srcs) == 0:
         is_dependent_build = True
-        if for_exec and len(ctx.files.srcs) == 0:
-            source_root = ""
-        else:
-            source_root = determine_source_root(hxml["source_files"][0]) if len(hxml["source_files"]) != 0 and len(ctx.files.srcs) == 0 else ""
     else:
         is_dependent_build = hxml["source_files"][0].startswith("external")
-        source_root = determine_source_root(hxml["source_files"][0])
 
-    # source_root = "external/{}/".format(hxml["name"]) if is_dependent_build else ""
+    # An empty source root seems to cover the use cases that are currently in use; this may need to be revisited, but
+    # will require unit test cases!
+    source_root = ""
 
     content = ""
 
