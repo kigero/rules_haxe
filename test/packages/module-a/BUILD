@@ -25,3 +25,25 @@ haxe_executable(
     visibility = ["//visibility:public"],
     deps = ["//:haxe-def"],
 )
+
+haxe_executable(
+    name = "java-bin-ac",
+    debug = True,
+    target = "java",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//:haxe-def",
+        "//module-c:haxe-def",
+    ],
+)
+
+haxe_executable(
+    name = "neko-bin-c",
+    debug = True,
+    main_class = "com.c.ModuleC",
+    target = "neko",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//module-c:haxe-def",
+    ],
+)
