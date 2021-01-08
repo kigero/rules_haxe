@@ -290,19 +290,21 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 
     content = ""
 
+    package = ctx.label.package + "/" if ctx.label.package != "" else ""
+
     # Target
     hxml["output_dir"] = "{}{}".format(ctx.attr.name, suffix)
+    hxml["build_file"] = "{}/{}{}/{}".format(ctx.var["BINDIR"], package, hxml["output_dir"], hxml["name"])
+    ext = ""
     if hxml["target"] == "neko":
-        content += "--neko {}/{}{}/{}.n\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
+        ext = ".n"
         hxml["output_file"] = "{}.n".format(hxml["name"], suffix)
     elif hxml["target"] == "python":
-        content += "--python {}/{}{}/{}.py\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
+        ext = ".py"
         hxml["output_file"] = "{}.py".format(hxml["name"], suffix)
     elif hxml["target"] == "php":
-        content += "--php {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
         hxml["output_file"] = "{}".format(hxml["name"], suffix)
     elif hxml["target"] == "cpp":
-        content += "--cpp {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
         output = "{}".format(hxml["name"])
         if hxml["main_class"] != None:
             mc = hxml["main_class"]
@@ -318,8 +320,6 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 
         hxml["output_file"] = output + ".exe"
     elif hxml["target"] == "java":
-        content += "--java {}/{}{}/{}\n".format(ctx.var["BINDIR"], source_root, hxml["output_dir"], hxml["name"])
-
         output = "{}".format(hxml["name"])
         if hxml["main_class"] != None:
             mc = hxml["main_class"]
@@ -334,6 +334,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
             output += "-Debug"
 
         hxml["output_file"] = output + ".jar"
+    content += "--{} {}{}\n".format(hxml["target"], hxml["build_file"], ext)
 
     # Debug
     if hxml["debug"] != None:

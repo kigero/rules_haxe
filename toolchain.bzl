@@ -260,6 +260,8 @@ def haxe_create_run_script(ctx, target, lib_name, out):
     else:
         neko_path = "neko"
 
+    package = ctx.label.package + "/" if ctx.label.package != "" else ""
+
     script_content = ""
     if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
         script_content += "@echo off\n"
@@ -271,18 +273,18 @@ def haxe_create_run_script(ctx, target, lib_name, out):
             script_content += "SET {}={}\n".format(e, toolchain.internal.env[e]).replace("/", "\\")
 
         if target == "neko":
-            script_content += "{} {}/{}".format(neko_path, ctx.attr.name, lib_name).replace("/", "\\")
+            script_content += "{} {}{}/{}".format(neko_path, package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "java":
-            script_content += "java -jar {}/{}".format(ctx.attr.name, lib_name).replace("/", "\\")
+            script_content += "java -jar {}{}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "python":
-            script_content += "python {}/{}".format(ctx.attr.name, lib_name).replace("/", "\\")
+            script_content += "python{} {}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "php":
             php_ini_var = ""
             if "PHP_INI" in ctx.var:
                 php_ini_var = "-c {}".format(ctx.var["PHP_INI"])
-            script_content += "php {} {}/{}/index.php".format(php_ini_var, ctx.attr.name, lib_name).replace("/", "\\")
+            script_content += "php {} {}{}/{}/index.php".format(php_ini_var, package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "cpp":
-            script_content += "{}/{}".format(ctx.attr.name, lib_name).replace("/", "\\")
+            script_content += "{}{}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
         script_content += " %*"
@@ -295,18 +297,18 @@ def haxe_create_run_script(ctx, target, lib_name, out):
             script_content += "set {}={}\n".format(e, toolchain.internal.env[e])
 
         if target == "neko":
-            script_content += "{} {}/{}".format(neko_path, ctx.attr.name, lib_name)
+            script_content += "{} {}{}/{}".format(neko_path, package, ctx.attr.name, lib_name)
         elif target == "java":
-            script_content += "java -jar {}/{}".format(ctx.attr.name, lib_name)
+            script_content += "java -jar {}{}/{}".format(package, ctx.attr.name, lib_name)
         elif target == "python":
-            script_content += "python {}/{}".format(ctx.attr.name, lib_name)
+            script_content += "python {}{}/{}".format(package, ctx.attr.name, lib_name)
         elif target == "php":
             php_ini_var = ""
             if "PHP_INI" in ctx.var:
                 php_ini_var = "-c {}".format(ctx.var["PHP_INI"])
-            script_content += "php {} {}/{}/index.php".format(php_ini_var, ctx.attr.name, lib_name)
+            script_content += "php {} {}{}/{}/index.php".format(php_ini_var, package, ctx.attr.name, lib_name)
         elif target == "cpp":
-            script_content += "{}/{}".format(ctx.attr.name, lib_name)
+            script_content += "{}{}/{}".format(package, ctx.attr.name, lib_name)
         else:
             fail("Invalid target {}".format(target))
         script_content += " \"$@\""
