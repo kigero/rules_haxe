@@ -335,6 +335,10 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
                 output += "-Debug"
 
             hxml["output_file"] = output + ".jar"
+        elif hxml["target"] == "js":
+            ext = ".js"
+            hxml["output_file"] = "{}.js".format(hxml["name"], suffix)
+
         content += "--{} {}{}\n".format(hxml["target"], hxml["build_file"], ext)
 
     # Debug
@@ -410,7 +414,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         command = "mv {} {}".format(build_file_1.path, out_file.path),
     )
 
-def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None):
+def calc_provider_response(ctx, toolchain, hxml, out_dir, output_file = None, launcher_file = None):
     """
     Determine an appropriate provider response based on the input context and the compilation target.
 
@@ -420,6 +424,7 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None):
         hxml: The HXML dictionary.
         out_dir: The output directory.
         launcher_file: The launcher file to run, if there is one.
+        output_file: The output file, if there is one.
 
     Returns:
         An array of providers.
@@ -454,6 +459,11 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None):
             ),
         ),
     ]
+
+    if output_file != None:
+        rtrn.append(OutputGroupInfo(
+            output_file = [output_file],
+        ))
 
     # Create target-specific responses
     if hxml["target"] == "java":

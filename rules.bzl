@@ -34,6 +34,7 @@ def _haxe_library_impl(ctx):
 
     # Post process the output file.
     output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
+    output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
 
     if hxml["target"] == "java":
         toolchain.create_final_jar(
@@ -43,16 +44,16 @@ def _haxe_library_impl(ctx):
             output,
             hxml["output_file"],
             ctx.attr.strip_haxe,
+            output_file = output_file,
         )
     else:
         ctx.actions.run_shell(
-            outputs = [output],
+            outputs = [output, output_file],
             inputs = [intermediate],
-            command = "cp -r {} {}".format(intermediate.path, output.path),
+            command = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path),
             use_default_shell_env = True,
         )
-
-    return calc_provider_response(ctx, toolchain, hxml, output)
+    return calc_provider_response(ctx, toolchain, hxml, output, output_file = output_file)
 
 haxe_library = rule(
     doc = "Create a library.",

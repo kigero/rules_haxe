@@ -212,7 +212,7 @@ def haxe_create_test_class(ctx, srcs, out):
         command = command,
     )
 
-def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True):
+def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None):
     """
     Create the final jar file, which strips out haxe classes and adds source files.
     
@@ -237,7 +237,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
         command += " " + file.path
 
     ctx.actions.run_shell(
-        outputs = [output],
+        outputs = [output, output_file],
         inputs = [intermediate],
         command = command,
         use_default_shell_env = True,
