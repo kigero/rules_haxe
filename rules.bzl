@@ -24,6 +24,9 @@ def _haxe_library_impl(ctx):
         for f in d.files.to_list():
             runfiles.append(f)
 
+    for file in find_direct_sources(ctx):
+        runfiles.append(file)
+
     toolchain.compile(
         ctx,
         hxml = build_file,
