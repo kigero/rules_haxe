@@ -19,6 +19,15 @@ haxe_library(
     deps = ["@test-module-a//:haxe-def"],
 )
 
+haxe_library(
+    name = "java-lib",
+    srcs = glob(["src/main/haxe/**/*.hx"]),
+    debug = True,
+    tags = ["manual"],
+    target = "java",
+    visibility = ["//visibility:public"],
+)
+
 haxe_executable(
     name = "java-bin",
     debug = True,

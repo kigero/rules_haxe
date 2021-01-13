@@ -158,6 +158,9 @@ def create_hxml_map(ctx, for_test = False):
     """
     hxml = {}
 
+    package = ctx.label.package + "/" if ctx.label.package != "" else ""
+    hxml["package"] = package
+
     hxml["for_test"] = for_test
 
     hxml["name"] = find_library_name(ctx)
@@ -249,7 +252,7 @@ def create_hxml_map(ctx, for_test = False):
                 if not new_classpath in hxml["classpaths"]:
                     hxml["classpaths"].append(new_classpath)
             else:
-                hxml["classpaths"].append("{}{}".format(_determine_classpath(dep_hxml["classpaths"], dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else "", classpath))
+                hxml["classpaths"].append("{}{}{}".format(_determine_classpath(dep_hxml["classpaths"], dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else "", dep_hxml["package"], classpath))
         for lib in dep_hxml["libs"]:
             if not lib in hxml["libs"]:
                 hxml["libs"][lib] = dep_hxml["libs"][lib]
@@ -293,8 +296,10 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
     package = ctx.label.package + "/" if ctx.label.package != "" else ""
 
     # Target
+    is_external = len([i for i in hxml["classpaths"] if i.startswith("external/")]) > 0
+    external_dir = "external/{}/".format(hxml["name"]) if is_external else ""
     hxml["output_dir"] = "{}{}".format(ctx.attr.name, suffix)
-    hxml["build_file"] = "{}/{}{}/{}".format(ctx.var["BINDIR"], package, hxml["output_dir"], hxml["name"])
+    hxml["build_file"] = "{}/{}{}{}/{}".format(ctx.var["BINDIR"], external_dir, package, hxml["output_dir"], hxml["name"])
     ext = ""
     if hxml["target"] != "":
         if hxml["target"] == "neko":

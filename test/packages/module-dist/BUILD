@@ -1,4 +1,5 @@
 load("@rules_haxe//:def.bzl", "haxe_executable", "haxe_library", "haxe_project_definition")
+load("@rules_java//java:defs.bzl", "java_library")
 
 haxe_project_definition(
     name = "module-def",
@@ -28,4 +29,13 @@ haxe_executable(
     tags = ["manual"],
     visibility = ["//visibility:public"],
     deps = ["//:module-def"],
+)
+
+java_library(
+    name = "module-jar",
+    srcs = glob(["src/main/java/**/*.java"]),
+    visibility = ["//visibility:public"],
+    deps = [
+        "@test-module-b//:java-lib",
+    ],
 )

@@ -224,6 +224,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
         jar_name: The name of the jar in the intermediate/output directories.
         strip: Strip out haxe classes.
         include_sources: Include the Java sources in the jar.
+        output_file: The output file to create.
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
