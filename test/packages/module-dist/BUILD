@@ -26,6 +26,7 @@ haxe_library(
 haxe_executable(
     name = "module-bin",
     debug = True,
+    main_class = "com.b.ModuleB",
     tags = ["manual"],
     visibility = ["//visibility:public"],
     deps = ["//:module-def"],

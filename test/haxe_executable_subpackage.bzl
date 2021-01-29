@@ -17,7 +17,7 @@ def _haxe_executable_subpackage_from_root_test_impl(ctx):
     asserts.equals(env, "neko-bin-c", hxml["output_dir"])
     asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-a/neko-bin-c", target_under_test[HaxeLibraryInfo].lib.path)
     asserts.equals(env, "external/test-module-a/", determine_source_root(hxml["source_files"][0]))
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/dist-test-c/neko-bin-c/dist-test-c", hxml["build_file"])
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/neko-bin-c/dist-test-c", hxml["build_file"])
 
     return analysistest.end(env)
 

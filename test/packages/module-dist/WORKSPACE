@@ -1,6 +1,6 @@
 local_repository(
     name = "rules_haxe",
-    path = "../../",
+    path = "../../../",
 )
 
 local_repository(
