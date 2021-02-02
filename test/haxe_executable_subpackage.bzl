@@ -17,7 +17,11 @@ def _haxe_executable_subpackage_from_root_test_impl(ctx):
     asserts.equals(env, "neko-bin-c", hxml["output_dir"])
     asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-a/neko-bin-c", target_under_test[HaxeLibraryInfo].lib.path)
     asserts.equals(env, "external/test-module-a/", determine_source_root(hxml["source_files"][0]))
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/neko-bin-c/dist-test-c", hxml["build_file"])
+
+    # The directory portion 'external/dist-test-c/' in this test comes from the fact that the test is being loaded via a
+    # dependent module below, in the target_under_test parameter.  When run in the test directory itself, the value is
+    # correct, without the 'external/dist-test-c/'.
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/dist-test-c/neko-bin-c/dist-test-c", hxml["build_file"])
 
     return analysistest.end(env)
 

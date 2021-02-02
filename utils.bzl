@@ -266,6 +266,9 @@ def create_hxml_map(ctx, for_test = False):
             if not arg in hxml["args"]:
                 hxml["args"].append(arg)
 
+    is_external = ctx.label.workspace_root.startswith("external")
+    hxml["external_dir"] = "external/{}/".format(hxml["name"]) if is_external else ""
+
     return hxml
 
 def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = False):
@@ -300,12 +303,8 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 
     # Target
 
-    is_external = len([i for i in hxml["classpaths"] if i.startswith("external/")]) > 0
-
-    is_external = hxml["package"] != ""
-    external_dir = "external/{}/".format(hxml["name"]) if is_external else ""
     hxml["output_dir"] = "{}{}".format(ctx.attr.name, suffix)
-    hxml["build_file"] = "{}/{}{}{}/{}".format(ctx.var["BINDIR"], external_dir, package, hxml["output_dir"], hxml["name"])
+    hxml["build_file"] = "{}/{}{}{}/{}".format(ctx.var["BINDIR"], hxml["external_dir"], package, hxml["output_dir"], hxml["name"])
     ext = ""
     if hxml["target"] != "":
         if hxml["target"] == "neko":

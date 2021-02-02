@@ -16,7 +16,11 @@ def _haxe_executable_dependency_test_impl(ctx):
     asserts.equals(env, "module-bin", hxml["output_dir"])
     asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/test-module-dist/module-bin", target_under_test[HaxeLibraryInfo].lib.path)
     asserts.equals(env, "external/test-module-a/", determine_source_root(hxml["source_files"][0]))
-    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/module-bin/dist-test", target_under_test[HaxeLibraryInfo].hxml["build_file"])
+
+    # The directory portion 'external/dist-test/' in this test comes from the fact that the test is being loaded via a
+    # dependent module below, in the target_under_test parameter.  When run in the test directory itself, the value is
+    # correct, without the 'external/dist-test/'.
+    asserts.equals(env, "bazel-out/x64_windows-fastbuild/bin/external/dist-test/module-bin/dist-test", target_under_test[HaxeLibraryInfo].hxml["build_file"])
 
     return analysistest.end(env)
 
