@@ -152,6 +152,7 @@ def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
     else:
         host = "LIN"
 
+    print(toolchain.internal)
     ctx.actions.run_shell(
         outputs = [install_out],
         inputs = inputs,
