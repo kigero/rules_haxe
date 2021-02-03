@@ -152,7 +152,6 @@ def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
     else:
         host = "LIN"
 
-    print(toolchain.internal)
     ctx.actions.run_shell(
         outputs = [install_out],
         inputs = inputs,
@@ -370,11 +369,13 @@ def _haxe_toolchain_impl(ctx):
 
     if haxe_cmd:
         haxe_dir = haxe_cmd.dirname
-        # fail("could not locate haxe command")
+    else:
+        haxe_dir = "."
 
     if neko_cmd:
         neko_dir = neko_cmd.dirname
-        # fail("could not locate neko command")
+    else:
+        neko_dir = "."
 
     if not haxelib_file:
         fail("could not locate haxelib file")
