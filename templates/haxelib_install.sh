@@ -124,7 +124,7 @@ else
     echo "JSON_PATH = $JSON_PATH" >> $OUTPUT
     if [[ "." == "$JSON_PATH" ]]; then
         mkdir "$COMMA_VERSION"
-        ls | grep -v "$COMMA_VERSION" | xargs mv -t "$COMMA_VERSION"
+        ls | grep -v "$COMMA_VERSION" | xargs -I {} mv {} "$COMMA_VERSION"
     else
         mv $JSON_PATH "$COMMA_VERSION"
     fi
