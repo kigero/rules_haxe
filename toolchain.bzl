@@ -196,7 +196,7 @@ def haxe_create_test_class(ctx, srcs, out):
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    if toolchain.internal.haxe_dir:
+    if toolchain.internal.haxe_dir != ".":
         command = toolchain.internal.haxe_dir + "/haxe"
     else:
         command = "haxe"
