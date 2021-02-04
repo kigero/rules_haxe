@@ -316,20 +316,26 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         elif hxml["target"] == "php":
             hxml["output_file"] = "{}".format(hxml["name"], suffix)
         elif hxml["target"] == "cpp":
-            output = "{}".format(hxml["name"])
+            output = "{}/".format(hxml["name"])
+            if not for_exec:
+                output += "lib"
+
             if hxml["main_class"] != None:
                 mc = hxml["main_class"]
                 if "." in mc:
                     mc = mc[mc.rindex(".") + 1:]
 
-                output += "/{}".format(mc)
+                output += "{}".format(mc)
             else:
-                output += "/{}".format(hxml["name"])
+                output += "{}".format(hxml["name"])
 
             if hxml["debug"] != None:
                 output += "-Debug"
 
-            hxml["output_file"] = output + ".exe"
+            if for_exec:
+                hxml["output_file"] = output + ".exe"
+            else:
+                hxml["output_file"] = output + ".lib"
         elif hxml["target"] == "java":
             output = "{}".format(hxml["name"])
             if hxml["main_class"] != None:
