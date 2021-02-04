@@ -228,7 +228,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    if toolchain.internal.haxe_dir:
+    if toolchain.internal.haxe_dir != ".":
         command = toolchain.internal.haxe_dir + "/haxe"
     else:
         command = "haxe"
