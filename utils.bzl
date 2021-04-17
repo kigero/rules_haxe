@@ -317,25 +317,35 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
             hxml["output_file"] = "{}".format(hxml["name"], suffix)
         elif hxml["target"] == "cpp":
             output = "{}/".format(hxml["name"])
+            output_file = ""
             if not for_exec:
-                output += "lib"
+                output_file += "lib"
 
             if hxml["main_class"] != None:
                 mc = hxml["main_class"]
                 if "." in mc:
                     mc = mc[mc.rindex(".") + 1:]
 
-                output += "{}".format(mc)
+                output_file += "{}".format(mc)
             else:
-                output += "{}".format(hxml["name"])
+                output_file += "{}".format(hxml["name"])
 
             if hxml["debug"] != None:
-                output += "-Debug"
+                output_file += "-debug"
 
             if for_exec:
-                hxml["output_file"] = output + ".exe"
+                output_file += ".exe"
             else:
-                hxml["output_file"] = output + ".lib"
+                output_file += ".lib"
+
+            found_output_file = False
+            for arg in hxml["args"]:
+                if arg.lower().startswith("-d haxe_output_file"):
+                    found_output_file = True
+            if not found_output_file:
+                hxml["args"].append("-D HAXE_OUTPUT_FILE={}".format(output_file))
+
+            hxml["output_file"] = output + output_file
         elif hxml["target"] == "java":
             output = "{}".format(hxml["name"])
             if hxml["main_class"] != None:
