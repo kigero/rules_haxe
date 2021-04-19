@@ -333,17 +333,17 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
             if hxml["debug"] != None:
                 output_file += "-debug"
 
-            if for_exec:
-                output_file += ".exe"
-            else:
-                output_file += ".lib"
-
             found_output_file = False
             for arg in hxml["args"]:
                 if arg.lower().startswith("-d haxe_output_file"):
                     found_output_file = True
             if not found_output_file:
                 hxml["args"].append("-D HAXE_OUTPUT_FILE={}".format(output_file))
+
+            if for_exec:
+                output_file += ".exe"
+            else:
+                output_file += ".lib"
 
             hxml["output_file"] = output + output_file
         elif hxml["target"] == "java":

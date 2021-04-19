@@ -285,7 +285,7 @@ def haxe_create_run_script(ctx, target, lib_name, out):
                 php_ini_var = "-c {}".format(ctx.var["PHP_INI"])
             script_content += "php {} {}{}/{}/index.php".format(php_ini_var, package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "cpp":
-            print(package + " -- " + ctx.attr.name + " -- " + lib_name)
+            lib_name = lib_name.replace(".lib", ",exe")
             script_content += "{}{}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
         else:
             fail("Invalid target {}".format(target))
