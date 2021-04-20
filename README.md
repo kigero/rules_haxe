@@ -158,6 +158,46 @@ On Windows (Linux has not been tested), getting the right MSVC environment can b
 * For MSVC 2015 and below, setting `HXCPP_MSVC` to the directory containing either `vsvars32.bat` or `vcvars32.bat` in your environment, and then passing `--action_env=HXCPP_MSVC` either on the command line or in a bazelrc file, should work for both 32 and 64 bit installs.
 * It looks like MSVC 2017 improved on this situation a bit by including a `vswhere` program, which HXCPP utilizes, to locate the installation root of Visual Studio.  The problem with this is that the bat files use the `ProgramFiles(x86)` substitution, which seems to be not a real environment variable but something special done by the batch processor.  This causes issues: HXCPP spawns a new `cmd` shell to examine these variables, and for whatever reason this shell can't process that special variable.  So with MSVC 2017, the capability is there in the bat files, but something with the nightmare that is cmd->bazel->bash->cmd the ability to use the right substitution to find that program is lost.  As it turns out though, if that substitution can be made, HXCPP seems to work properly.  So... the horrible solution that is currently implemented in this project: if the HXCPP haxelib is installed, any bat files in the haxelib's toolchain directory relating to finding MSVC variables are postprocessed to remove the substitution and instead set the default path to this folder.  See the `templates/postprocess_hxcpp.sh` file for the exact command.  Yes, editing files after the fact is terrible, but at this time I don't have a better solution.  The only advantage is that you shouldn't need to pass any special CLI parameters to locate the MSVC installation.  If/when this causes a problem, I'll revisit it then.
 
+A CPP compiled project can be used as a dependency for a downstream `cc_library` or `cc_binary` rule.  This support is very basic at this time, but generally it should be available - at least on windows with MSVC.  Of course there are some caveats: 
+* To build a static library, include `extra_args = ["-D static_link"]` in the `haxe_library` rule.  This generates a .lib output.
+* To build a dynamic library, include `extra_args = ["-D dll_export", "-D dll_link"]` in the `haxe_library` rule.  This generates a .dll and a .lib output.
+* The response includes a `CcInfo` provider with the compilation and linking context.  Currently this is a bit messy.
+    * Headers must be File objects that end in an appropriate extension (e.g. `.h`).  Directories of results, which is what we have as the exact set of headers isn't known until Haxe compiles the code, are allowed as long as they have the right extension.  So the compilation context copies the includes to a separate folder ending in `.h`.
+    * The linking context includes the static or dynamic libraries based on the Haxe defines.
+    
+The resultant rule can be used like this:
+```
+haxe_library(
+    name = "mylib",
+    extra_args = [
+        "-D dll_export",
+        "-D dll_link",
+    ],
+    target = "cpp",
+    deps = ["//:haxe-def"],
+)
+
+cc_binary(
+    name = "Project",
+    srcs = ["//:sources"],
+    deps = [":mylib"],
+)
+```
+
+In the source code, include the following:
+```
+#include <HxcppConfig-19.h>
+extern "C"
+{
+	extern const char *hxRunLibrary();
+}
+...
+void MyClass::myInitFunc() {
+    // Initialize haxe.
+    hxRunLibrary();
+}
+```
+
 # Windows
 
 Windows is a bit of a pain; you'll need symlink support as described in the [Bazel

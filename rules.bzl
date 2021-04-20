@@ -13,7 +13,7 @@ def _haxe_library_impl(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     # Build the HXML file.
-    hxml = create_hxml_map(ctx)
+    hxml = create_hxml_map(ctx, toolchain)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
     create_build_hxml(ctx, toolchain, hxml, build_file, "-intermediate")
     intermediate = ctx.actions.declare_directory(hxml["output_dir"])
@@ -50,10 +50,19 @@ def _haxe_library_impl(ctx):
             output_file = output_file,
         )
     else:
+        hxcpp_include_dir = None
+        if hxml["target"] == "cpp":
+            hxcpp_include_dir = ctx.actions.declare_directory("hxcpp_includes")
+            toolchain.copy_cpp_includes(ctx, hxcpp_include_dir)
+
+        cmd = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path)
+        if hxcpp_include_dir != None:
+            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output.path, hxml["name"])
+
         ctx.actions.run_shell(
             outputs = [output, output_file],
-            inputs = [intermediate],
-            command = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path),
+            inputs = [intermediate, hxcpp_include_dir],
+            command = cmd,
             use_default_shell_env = True,
         )
     return calc_provider_response(ctx, toolchain, hxml, output, output_file = output_file)
@@ -62,6 +71,7 @@ haxe_library = rule(
     doc = "Create a library.",
     implementation = _haxe_library_impl,
     toolchains = ["@rules_haxe//:toolchain_type"],
+    fragments = ["cpp"],
     attrs = {
         "library_name": attr.string(
             doc = "The name of the library to create; if not provided the rule name will be used.",
@@ -113,7 +123,7 @@ def _haxe_executable_impl(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     # Build the HXML file.
-    hxml = create_hxml_map(ctx)
+    hxml = create_hxml_map(ctx, toolchain)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
     create_build_hxml(ctx, toolchain, hxml, build_file, for_exec = True)
     dir = ctx.actions.declare_directory(hxml["output_dir"])
@@ -201,7 +211,7 @@ def _haxe_test_impl(ctx):
         test_file,
     )
 
-    hxml = create_hxml_map(ctx, for_test = True)
+    hxml = create_hxml_map(ctx, toolchain, for_test = True)
 
     build_file = ctx.actions.declare_file("{}-build-test.hxml".format(ctx.attr.name))
     create_build_hxml(ctx, toolchain, hxml, build_file)
@@ -301,7 +311,7 @@ def _haxe_project_definition(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     # Build the HXML file.
-    hxml = create_hxml_map(ctx)
+    hxml = create_hxml_map(ctx, toolchain)
 
     return [
         DefaultInfo(
@@ -405,7 +415,7 @@ def _haxe_gen_hxml(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     # Build the HXML file.
-    hxml = create_hxml_map(ctx)
+    hxml = create_hxml_map(ctx, toolchain)
 
     # Update references to external resources.
     temp_classpaths = []
@@ -484,7 +494,7 @@ def _haxe_dox(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     # Build the HXML file.
-    hxml = create_hxml_map(ctx)
+    hxml = create_hxml_map(ctx, toolchain)
 
     xml_file = ctx.actions.declare_file("{}.xml".format(hxml["name"]))
     hxml["target"] = ""

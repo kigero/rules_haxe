@@ -2,7 +2,7 @@
 Defines the Haxe toolchain.
 """
 
-def _run_haxe(ctx, inputs, output, toolchain, haxe_cmd, mnemonic = None, ignore_output = False):
+def _run_haxe(ctx, inputs, output, toolchain, haxe_cmd, mnemonic = None, ignore_output = False, additional_outputs = []):
     """
     Runs a Haxe command using run_shell.  
     
@@ -16,6 +16,7 @@ def _run_haxe(ctx, inputs, output, toolchain, haxe_cmd, mnemonic = None, ignore_
         haxe_cmd: The actual haxe command to run; may be a haxe or haxelib command, e.g. `haxe build.hxml` or `haxelib install hx3compat`.
         mnemonic: The mnemonic to pass to run_shell.
         ignore_output: True if output should be sent to /dev/null, False if output should be redirected to outout (e.g. for haxelib path commands).
+        additional_outputs: Any other outputs that are created by haxe_cmd that should be included in the outputs.
     """
     if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
         host = "WIN"
@@ -28,7 +29,7 @@ def _run_haxe(ctx, inputs, output, toolchain, haxe_cmd, mnemonic = None, ignore_
         redirect_output = output.path
 
     ctx.actions.run_shell(
-        outputs = [output],
+        outputs = [output] + additional_outputs,
         inputs = inputs,
         command = "{} $@".format(toolchain.internal.run_haxe_file.path),
         arguments = [toolchain.internal.neko_dir, toolchain.internal.haxe_dir, toolchain.internal.env["HAXELIB_PATH"], host, redirect_output, haxe_cmd],
@@ -244,6 +245,30 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
         use_default_shell_env = True,
     )
 
+def haxe_copy_cpp_includes(ctx, to_dir):
+    """
+    Copy the HXCPP includes to a new directory so they can be included in the outputs.
+    
+    Args:
+        ctx: Bazel context.
+        to_dir: The directory to copy the HXCPP includes to.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    cmd = "cp -r `haxelib libpath hxcpp`include/* " + to_dir.path
+
+    path_file = toolchain.haxelib_install(ctx, "hxcpp", toolchain.haxelib_language_versions["hxcpp"])
+    copy_file = ctx.actions.declare_file("hxcpp_copy")
+
+    ctx.actions.run_shell(
+        outputs = [copy_file, to_dir],
+        inputs = [path_file],
+        command = "{} $@".format(toolchain.internal.copy_hxcpp_includes_script.path),
+        arguments = [toolchain.internal.env["HAXELIB_PATH"], to_dir.path, copy_file.path],
+        use_default_shell_env = True,
+        mnemonic = "CopyHxCppIncludes",
+    )
+
 def haxe_create_run_script(ctx, target, lib_name, out):
     """
     Create a run script usable by Bazel for running executables (e.g. unit tests).
@@ -346,6 +371,7 @@ def _haxe_toolchain_impl(ctx):
     run_haxe_file = None
     haxelib_install_file = None
     postprocess_hxcpp_script = None
+    copy_hxcpp_includes_script = None
     haxe_dir = None
     neko_dir = None
     postprocess_dox_tool = None
@@ -365,6 +391,8 @@ def _haxe_toolchain_impl(ctx):
             haxelib_install_file = f
         if f.path.endswith("/postprocess_hxcpp.sh"):
             postprocess_hxcpp_script = f
+        if f.path.endswith("/copy_hxcpp_includes.sh"):
+            copy_hxcpp_includes_script = f
         if f.path.endswith("/postprocess_dox") or f.path.endswith("/postprocess_dox.exe"):
             postprocess_dox_tool = f
 
@@ -388,12 +416,21 @@ def _haxe_toolchain_impl(ctx):
         fail("could not locate haxelib_install.sh file")
     if not postprocess_hxcpp_script:
         fail("could not locate postprocess_hxcpp.sh file")
+    if not copy_hxcpp_includes_script:
+        fail("could not locate copy_hxcpp_includes.sh file")
     if not postprocess_dox_tool:
         fail("could not locate postprocess_dox_tool")
 
     env = {
         "HAXELIB_PATH": haxelib_file.dirname,
     }
+
+    haxelib_language_versions = {
+        "hxcpp": "4.1.15",
+        "hxjava": "3.2.0",
+    }
+
+    haxe_cpp_toolchain = ctx.attr.cpp_toolchain[platform_common.ToolchainInfo]
 
     return [platform_common.ToolchainInfo(
         # Public toolchain interface.
@@ -402,7 +439,10 @@ def _haxe_toolchain_impl(ctx):
         create_test_class = haxe_create_test_class,
         create_run_script = haxe_create_run_script,
         create_final_jar = haxe_create_final_jar,
+        copy_cpp_includes = haxe_copy_cpp_includes,
         postprocess_dox = haxe_postprocess_dox,
+        haxelib_language_versions = haxelib_language_versions,
+        haxe_cpp_toolchain = haxe_cpp_toolchain,
 
         # Internal data. Contents may change without notice.
         internal = struct(
@@ -412,6 +452,7 @@ def _haxe_toolchain_impl(ctx):
             run_haxe_file = run_haxe_file,
             haxelib_install_file = haxelib_install_file,
             postprocess_hxcpp_script = postprocess_hxcpp_script,
+            copy_hxcpp_includes_script = copy_hxcpp_includes_script,
             postprocess_dox_tool = postprocess_dox_tool,
             env = env,
             tools = ctx.files.tools,
@@ -425,6 +466,10 @@ haxe_toolchain = rule(
         "tools": attr.label_list(
             mandatory = True,
             doc = "Tools needed from the Haxe/Neko installation.",
+        ),
+        "cpp_toolchain": attr.label(
+            mandatory = True,
+            doc = "C++ toolchain to use for downstream C++ dependencies.",
         ),
     },
 )

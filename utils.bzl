@@ -145,12 +145,13 @@ def find_main_class(ctx):
 
     return None
 
-def create_hxml_map(ctx, for_test = False):
+def create_hxml_map(ctx, toolchain, for_test = False):
     """
     Create a dict containing haxe build parameters based on the input attributes from the calling rule.
 
     Args:
         ctx: Bazel context.
+        toolchain: The Haxe toolchain instance.
         for_test: True if build parameters for unit testing should be added, False otherwise.
 
     Returns:
@@ -180,9 +181,12 @@ def create_hxml_map(ctx, for_test = False):
 
     hxml["libs"] = dict()
     if hxml["target"] == "java":
-        hxml["libs"]["hxjava"] = "3.2.0"
+        hxml["libs"]["hxjava"] = toolchain.haxelib_language_versions["hxjava"]
     elif hxml["target"] == "cpp":
-        hxml["libs"]["hxcpp"] = "4.1.15"
+        hxml["libs"]["hxcpp"] = toolchain.haxelib_language_versions["hxcpp"]
+        if ctx.var["TARGET_CPU"].startswith("x64") and not "-D HXCPP_M64" in hxml["args"]:
+            hxml["args"].append("-D HXCPP_M64")
+
     if hasattr(ctx.attr, "haxelibs"):
         for lib in ctx.attr.haxelibs:
             version = ctx.attr.haxelibs[lib]
@@ -342,6 +346,8 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 
             if for_exec:
                 output_file += ".exe"
+            elif "-D dll_link" in hxml["args"]:
+                output_file += ".dll"
             else:
                 output_file += ".lib"
 
@@ -486,10 +492,7 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
         ),
     ]
 
-    if output_file != None:
-        rtrn.append(OutputGroupInfo(
-            output_file = [output_file],
-        ))
+    cpp_files = []
 
     # Create target-specific responses
     if hxml["target"] == "java":
@@ -515,5 +518,71 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
         rtrn.append(PyInfo(
             transitive_sources = depset([out_dir]),
         ))
+    elif hxml["target"] == "cpp":
+        # To get includes to be added to a downstream cc_library, they need to be added to the output.  But since we
+        # don't have the File objects for each include, a tree result needsto be added.  This tree result needs to be
+        # named such that cc_libreary will accept it - so it needs to end in '.h'.  Copy the includes folder to a new
+        # folder with an appropriate name.
+        inc = ctx.actions.declare_directory("{}_includes_dir.h".format(hxml["name"]))
+        ctx.actions.run_shell(
+            outputs = [inc],
+            inputs = [out_dir],
+            command = "cp -r -t {} {}/{}/include/* {}/{}/HxcppConfig-19.h".format(inc.path, out_dir.path, hxml["name"], out_dir.path, hxml["name"]),
+        )
+
+        # Create an appropriate library object depending on whether the library is static or dynamic.
+        library_to_link = None
+        if output_file.path.lower().endswith(".dll"):
+            # Create a copy of the .lib file associated with the .dll so we have a File reference to it.
+            lib_file = ctx.actions.declare_file("{}/{}/lib{}-debug.lib".format(out_dir.path, hxml["name"], hxml["name"]))
+            ctx.actions.run_shell(
+                outputs = [lib_file],
+                inputs = [out_dir],
+                command = "cp {}/{}/obj/lib/lib{}-debug.lib {}".format(out_dir.path, hxml["name"], hxml["name"], lib_file.path),
+            )
+
+            library_to_link = cc_common.create_library_to_link(
+                actions = ctx.actions,
+                dynamic_library = output_file,
+                interface_library = lib_file,
+                feature_configuration = cc_common.configure_features(ctx = ctx, cc_toolchain = toolchain.haxe_cpp_toolchain),
+                cc_toolchain = toolchain.haxe_cpp_toolchain,
+            )
+
+            cpp_files.append(output_file)
+            cpp_files.append(lib_file)
+
+        elif output_file.path.lower().endswith(".lib"):
+            library_to_link = cc_common.create_library_to_link(
+                actions = ctx.actions,
+                static_library = output_file,
+                feature_configuration = cc_common.configure_features(ctx = ctx, cc_toolchain = toolchain.haxe_cpp_toolchain),
+                cc_toolchain = toolchain.haxe_cpp_toolchain,
+            )
+
+            cpp_files.append(output_file)
+
+        # Finally create the compilation context and add it to the response.
+        linking_context = None
+        if library_to_link != None:
+            linking_context = cc_common.create_linking_context(
+                linker_inputs = depset([cc_common.create_linker_input(
+                    owner = ctx.label,
+                    libraries = depset([library_to_link]),
+                )]),
+            )
+
+        rtrn.append(CcInfo(
+            compilation_context = cc_common.create_compilation_context(
+                includes = depset([inc.path]),
+                headers = depset([inc]),
+            ),
+            linking_context = linking_context,
+        ))
+
+    rtrn.append(OutputGroupInfo(
+        output_file = [output_file],
+        cpp_files = cpp_files,
+    ))
 
     return rtrn
