@@ -148,7 +148,7 @@ def _haxe_download_version(ctx):
             "amd64": {
                 "haxe": {
                     "4.1.2": {
-                        "url": "https://build.haxe.org/builds/haxe/windows64/haxe_2020-06-30_development_8ef3be1.zip",
+                        "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.1.2/haxe-4.1.2-win64.zip",
                         "sha256": "4180efbdd23f2a5a3b2230b8ed6edb59945ff35b71df9820176e1b3ece2cad77",
                     },
                 },
