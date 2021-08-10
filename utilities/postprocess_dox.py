@@ -1,15 +1,13 @@
 import sys
 import os
 import xml.etree.ElementTree as ET
-from enum import Enum
 import codecs
 import shutil
 import tempfile
 
-class Type(Enum):
-    ENUM = 1
-    INTERFACE = 2
-    CLASS = 3
+TYPE_ENUM = 1
+TYPE_INTERFACE = 2
+TYPE_CLASS = 3
     
 class MemberDesc:
     def parsePath(self, element):
@@ -82,11 +80,11 @@ class TypeDesc:
         self.is_private = "private" in element.attrib and "1" == element.attrib["private"]
         
         if element.tag == "enum":
-            self.type = Type.ENUM
+            self.type = TYPE_ENUM
         elif "interface" in element.attrib and "1" == element.attrib["interface"]:
-            self.type = Type.INTERFACE
+            self.type = TYPE_INTERFACE
         else:
-            self.type = Type.CLASS
+            self.type = TYPE_CLASS
             
         self.implements = []
         self.extends = []
@@ -175,7 +173,8 @@ for fqpn in types:
         
     desc = types[fqpn]
     pkg_dir = os.path.join(out_path, desc.pkg.replace(".", "/"))
-    os.makedirs(pkg_dir, exist_ok = True)
+    if not os.path.exists(pkg_dir):
+        os.makedirs(pkg_dir)
     cls_file = os.path.join(pkg_dir, desc.name + ".java")
     
     with codecs.open(cls_file, "w", "UTF-8") as out:
@@ -186,11 +185,11 @@ for fqpn in types:
             out.write("/**\n\t{}\n */\n".format(desc.comment))
             
         out.write("private " if desc.is_private else "public ")
-        if desc.type == Type.CLASS:
+        if desc.type == TYPE_CLASS:
             out.write("class")
-        elif desc.type == Type.INTERFACE:
+        elif desc.type == TYPE_INTERFACE:
             out.write("interface")
-        elif desc.type == Type.ENUM:
+        elif desc.type == TYPE_ENUM:
             out.write("enum")
         out.write(" {}".format(desc.name))
         if len(desc.implements) > 0:
@@ -216,7 +215,7 @@ for fqpn in types:
         out.write("{\n")
         
         for idx, m_desc in enumerate(desc.members):
-            if desc.type == Type.ENUM and idx > 0:
+            if desc.type == TYPE_ENUM and idx > 0:
                 out.write(",\n")
                 
             comment = m_desc.comment
@@ -227,7 +226,7 @@ for fqpn in types:
                 out.write(comment)
                 out.write("\n */\n")
             
-            if desc.type == Type.ENUM:
+            if desc.type == TYPE_ENUM:
                 out.write(m_desc.name)
                 continue
                 
@@ -255,7 +254,7 @@ for fqpn in types:
                         arg_name = arg_name[1:]
                     out.write(arg_name)
                 out.write(")")
-                if desc.type == Type.CLASS:
+                if desc.type == TYPE_CLASS:
                     out.write("{}")
             out.write(";\n")
             
