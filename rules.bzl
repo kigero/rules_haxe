@@ -50,10 +50,12 @@ def _haxe_library_impl(ctx):
             output_file = output_file,
         )
     else:
+        inputs = [intermediate]
         hxcpp_include_dir = None
         if hxml["target"] == "cpp":
             hxcpp_include_dir = ctx.actions.declare_directory("hxcpp_includes")
             toolchain.copy_cpp_includes(ctx, hxcpp_include_dir)
+            inputs.append(hxcpp_include_dir)
 
         cmd = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path)
         if hxcpp_include_dir != None:
@@ -61,7 +63,7 @@ def _haxe_library_impl(ctx):
 
         ctx.actions.run_shell(
             outputs = [output, output_file],
-            inputs = [intermediate, hxcpp_include_dir],
+            inputs = inputs,
             command = cmd,
             use_default_shell_env = True,
         )
