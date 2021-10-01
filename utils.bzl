@@ -201,7 +201,9 @@ def create_hxml_map(ctx, toolchain, for_test = False):
     hxml["classpaths"].append("src/main/haxe")
     if for_test:
         hxml["classpaths"].append(ctx.var["BINDIR"])
+        hxml["classpaths"].append("{}/{}".format(ctx.var["BINDIR"], package))
         hxml["classpaths"].append("src/test/haxe")
+        hxml["classpaths"].append("{}src/test/haxe".format(package))
     if hasattr(ctx.attr, "classpaths"):
         for p in ctx.attr.classpaths:
             hxml["classpaths"].append(p)
