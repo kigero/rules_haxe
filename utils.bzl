@@ -44,12 +44,13 @@ def find_direct_sources(ctx):
     if hasattr(ctx.files, "srcs"):
         rtrn += ctx.files.srcs
 
-    for dep in ctx.attr.deps:
-        haxe_dep = dep[HaxeProjectInfo]
-        if haxe_dep == None:
-            continue
-        if hasattr(haxe_dep, "srcs"):
-            rtrn += haxe_dep.srcs
+    if hasattr(ctx.attr, "deps"):
+        for dep in ctx.attr.deps:
+            haxe_dep = dep[HaxeProjectInfo]
+            if haxe_dep == None:
+                continue
+            if hasattr(haxe_dep, "srcs"):
+                rtrn += haxe_dep.srcs
 
     return rtrn
 
@@ -90,12 +91,13 @@ def find_direct_resources(ctx):
     if hasattr(ctx.files, "resources"):
         rtrn += ctx.files.resources
 
-    for dep in ctx.attr.deps:
-        haxe_dep = dep[HaxeProjectInfo]
-        if haxe_dep == None:
-            continue
-        if hasattr(haxe_dep, "resources"):
-            rtrn += haxe_dep.resources
+    if hasattr(ctx.attr, "deps"):
+        for dep in ctx.attr.deps:
+            haxe_dep = dep[HaxeProjectInfo]
+            if haxe_dep == None:
+                continue
+            if hasattr(haxe_dep, "resources"):
+                rtrn += haxe_dep.resources
 
     return rtrn
 
@@ -113,7 +115,7 @@ def find_library_name(ctx):
         return ctx.attr.library_name
     elif hasattr(ctx.attr, "executable_name") and ctx.attr.executable_name != "":
         return ctx.attr.executable_name
-    else:
+    elif hasattr(ctx.attr, "deps"):
         for dep in ctx.attr.deps:
             haxe_dep = dep[HaxeProjectInfo]
             if haxe_dep == None:
@@ -145,7 +147,7 @@ def find_main_class(ctx):
 
     return None
 
-def create_hxml_map(ctx, toolchain, for_test = False):
+def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
     """
     Create a dict containing haxe build parameters based on the input attributes from the calling rule.
 
@@ -153,6 +155,7 @@ def create_hxml_map(ctx, toolchain, for_test = False):
         ctx: Bazel context.
         toolchain: The Haxe toolchain instance.
         for_test: True if build parameters for unit testing should be added, False otherwise.
+        for_std_build: True if build parameters for the standard build should be added, False otherwise.
 
     Returns:
         A dict containing the HXML properties.
@@ -164,12 +167,14 @@ def create_hxml_map(ctx, toolchain, for_test = False):
 
     hxml["for_test"] = for_test
 
-    hxml["name"] = find_library_name(ctx)
     hxml["target"] = ctx.attr.target if hasattr(ctx.attr, "target") else None
     hxml["debug"] = ctx.attr.debug if hasattr(ctx.attr, "debug") else False
+    hxml["name"] = "std-{}".format(hxml["target"]) if for_std_build else find_library_name(ctx)
 
     if for_test:
         hxml["main_class"] = "MainTest"
+    elif for_std_build:
+        hxml["main_class"] = "StdBuild"
     else:
         hxml["main_class"] = find_main_class(ctx)
 
@@ -240,37 +245,38 @@ def create_hxml_map(ctx, toolchain, for_test = False):
             hxml["c-args"] += ["-source", ctx.var["haxe_java_target_version"], "-target", ctx.var["haxe_java_target_version"]]
 
     # Handle Dependencies
-    for dep in ctx.attr.deps:
-        haxe_dep = dep[HaxeLibraryInfo]
-        if haxe_dep == None or haxe_dep.hxml == None:
-            continue
-        dep_hxml = haxe_dep.hxml
-        for classpath in dep_hxml["classpaths"]:
-            if classpath.startswith("external"):
-                parts = classpath.split("/")
-                new_classpath = ""
-                for idx in range(len(parts)):
-                    if parts[idx] == "external":
-                        new_classpath = "external"
-                    elif parts[idx] != "":
-                        new_classpath += "/" + parts[idx]
+    if hasattr(ctx.attr, "deps"):
+        for dep in ctx.attr.deps:
+            haxe_dep = dep[HaxeLibraryInfo]
+            if haxe_dep == None or haxe_dep.hxml == None:
+                continue
+            dep_hxml = haxe_dep.hxml
+            for classpath in dep_hxml["classpaths"]:
+                if classpath.startswith("external"):
+                    parts = classpath.split("/")
+                    new_classpath = ""
+                    for idx in range(len(parts)):
+                        if parts[idx] == "external":
+                            new_classpath = "external"
+                        elif parts[idx] != "":
+                            new_classpath += "/" + parts[idx]
 
-                if not new_classpath in hxml["classpaths"]:
-                    hxml["classpaths"].append(new_classpath)
-            else:
-                calculated_classpath = _determine_classpath(dep_hxml["classpaths"], dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else ""
-                if calculated_classpath == dep_hxml["package"]:
-                    calculated_classpath = ""
-                hxml["classpaths"].append("{}{}{}".format(calculated_classpath, dep_hxml["package"], classpath))
-        for lib in dep_hxml["libs"]:
-            if not lib in hxml["libs"]:
-                hxml["libs"][lib] = dep_hxml["libs"][lib]
-        for resource in dep_hxml["resources"]:
-            if not resource in hxml["resources"]:
-                hxml["resources"][resource] = dep_hxml["resources"][resource]
-        for arg in dep_hxml["args"]:
-            if not arg in hxml["args"]:
-                hxml["args"].append(arg)
+                    if not new_classpath in hxml["classpaths"]:
+                        hxml["classpaths"].append(new_classpath)
+                else:
+                    calculated_classpath = _determine_classpath(dep_hxml["classpaths"], dep_hxml["source_files"][0]) if len(dep_hxml["source_files"]) != 0 else ""
+                    if calculated_classpath == dep_hxml["package"]:
+                        calculated_classpath = ""
+                    hxml["classpaths"].append("{}{}{}".format(calculated_classpath, dep_hxml["package"], classpath))
+            for lib in dep_hxml["libs"]:
+                if not lib in hxml["libs"]:
+                    hxml["libs"][lib] = dep_hxml["libs"][lib]
+            for resource in dep_hxml["resources"]:
+                if not resource in hxml["resources"]:
+                    hxml["resources"][resource] = dep_hxml["resources"][resource]
+            for arg in dep_hxml["args"]:
+                if not arg in hxml["args"]:
+                    hxml["args"].append(arg)
 
     is_external = ctx.label.workspace_root.startswith("external")
     hxml["external_dir"] = "external/{}/".format(hxml["name"]) if is_external else ""
@@ -448,7 +454,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         command = "mv {} {}".format(build_file_1.path, out_file.path),
     )
 
-def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, output_file = None):
+def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, output_file = None, library_name = None):
     """
     Determine an appropriate provider response based on the input context and the compilation target.
 
@@ -459,6 +465,7 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
         out_dir: The output directory.
         launcher_file: The launcher file to run, if there is one.
         output_file: The output file, if there is one.
+        library_name: The name of the library, overrides the ctx variables.
 
     Returns:
         An array of providers.
@@ -467,6 +474,24 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
     if launcher_file != None:
         runfiles.append(launcher_file)
         runfiles += toolchain.internal.tools
+
+    haxe_deps_lib_direct = []
+    haxe_deps_lib_transitive = []
+    haxe_deps_proj_direct = []
+    haxe_deps_proj_transitive = []
+    if hasattr(ctx.attr, "deps"):
+        haxe_deps_lib_direct = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps]
+        haxe_deps_lib_transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps]
+        haxe_deps_proj_direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps]
+        haxe_deps_proj_transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps]
+
+    srcs = []
+    if hasattr(ctx.files, "srcs"):
+        srcs = ctx.files.srcs
+
+    resources = []
+    if hasattr(ctx.files, "resources"):
+        resources = ctx.files.resources
 
     rtrn = [
         DefaultInfo(
@@ -478,18 +503,18 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
             lib = out_dir,
             hxml = hxml,
             deps = depset(
-                direct = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
-                transitive = [dep[HaxeLibraryInfo].deps for dep in ctx.attr.deps],
+                direct = haxe_deps_lib_direct,
+                transitive = haxe_deps_lib_transitive,
             ),
         ),
         HaxeProjectInfo(
             hxml = hxml,
-            srcs = ctx.files.srcs,
-            resources = ctx.files.resources,
-            library_name = ctx.attr.executable_name if hasattr(ctx.attr, "executable_name") else ctx.attr.library_name,
+            srcs = srcs,
+            resources = resources,
+            library_name = library_name if library_name != None else (ctx.attr.executable_name if hasattr(ctx.attr, "executable_name") else ctx.attr.library_name),
             deps = depset(
-                direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps],
-                transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
+                direct = haxe_deps_proj_direct,
+                transitive = haxe_deps_proj_transitive,
             ),
         ),
     ]
@@ -508,9 +533,10 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
         )
 
         java_deps = []
-        for dep in ctx.attr.deps:
-            if hasattr(dep, "JavaInfo"):
-                java_deps.append(dep[JavaInfo])
+        if hasattr(ctx.attr, "deps"):
+            for dep in ctx.attr.deps:
+                if hasattr(dep, "JavaInfo"):
+                    java_deps.append(dep[JavaInfo])
         rtrn.append(JavaInfo(
             output_jar = java_out,
             compile_jar = java_out,

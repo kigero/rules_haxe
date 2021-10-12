@@ -263,6 +263,65 @@ class Utils
 		Sys.println("\t\t}\n\t}\n}\n");
 	}
 
+	private static function findHXFiles(path:String, output:Array<String>, exclude:Array<String>, recursive = true, relPath = "")
+	{
+		for (child in FileSystem.readDirectory(path))
+		{
+			var fullPath = path + "/" + child;
+			if (recursive && FileSystem.isDirectory(fullPath))
+			{
+				findHXFiles(fullPath, output, exclude, recursive, relPath + child + "/");
+			}
+			else if (child.endsWith(".hx"))
+			{
+				var fullRelPath = relPath + child;
+				var isExcluded = false;
+				for (ex in exclude)
+				{
+					if (fullRelPath.startsWith(ex))
+					{
+						isExcluded = true;
+						break;
+					}
+				}
+				if (!isExcluded)
+				{
+					output.push(fullRelPath);
+				}
+			}
+		}
+	}
+
+	private static function genStdBuild(haxeInstallDir:String, target:String)
+	{
+		var files = new Array<String>();
+		findHXFiles(haxeInstallDir + "/std", files, [], false, "std/");
+		findHXFiles(haxeInstallDir + "/std/haxe", files, ["std/haxe/macro/"], true, "std/haxe/");
+		findHXFiles(haxeInstallDir + "/std/" + target, files, [], true, "std/" + target + "/");
+		if (target != "js")
+		{
+			findHXFiles(haxeInstallDir + "/std/sys", files, [], true, "std/sys/");
+		}
+
+		var classes = new Array<String>();
+		for (file in files)
+		{
+			for (cls in findFQCN(haxeInstallDir + "/" + file))
+			{
+				if (!classes.contains(cls) && !EXCLUDED_CLASSES.contains(cls) && !cls.startsWith(";"))
+				{
+					classes.push(cls);
+				}
+			}
+		}
+
+		for (cls in classes)
+		{
+			Sys.println("import " + cls + ";");
+		}
+		Sys.println("class StdBuild{ public static function main(){} }");
+	}
+
 	static public function main()
 	{
 		var args = Sys.args();
@@ -280,11 +339,97 @@ class Utils
 			case "genMainTest":
 				genMainTest(args.slice(1));
 
+			case "genStdBuild":
+				genStdBuild(args[1], args[2]);
+
 			default:
 				throw 'Bad action ${args[0]}';
 		}
 	}
+
+	// @formatter:off
+	private static var EXCLUDED_CLASSES = [
+		"ArrayAccess",
+		"haxe.IMap",
+		"haxe.ds.TreeNode",
+		"haxe.ds.GenericCell",
+		"haxe.ds.GenericStackIterator",
+		"haxe.ds.HashMapData",
+		"haxe.ds.ListNode",
+		"haxe.ds.ListIterator",
+		"haxe.ds.ListKeyValueIterator",
+		"haxe.Lock",
+		"haxe.Mutex",
+		"haxe.Thread",
+		"haxe.EnumValueTools",
+		"haxe.___Int64",
+		"haxe.io.ArrayBufferViewImpl",
+		"haxe.io.BytesDataImpl",
+		"haxe.io.SingleHelper",
+		"haxe.io.FloatHelper",
+		"haxe.MainEvent",
+		"haxe.rtti.TypeApi",
+		"haxe.rtti.CTypeTools",
+		"haxe.TimerTask",
+		"haxe.DefaultResolver",
+		"haxe.NullResolver",
+		"haxe.xml.S",
+		"haxe.xml.XmlParserException",
+		"haxe.zip.HuffTools",
+		"haxe.zip.Window",
+		"java.db.JdbcConnection",
+		"java.db.JdbcResultSet",
+		"java.internal.IHxObject",
+		"java.internal.DynamicObject",
+		"java.internal.HxEnum",
+		"java.internal.ParamEnum",
+		"java.vm.AtomicNode",
+		"java.vm.Node",
+		"java.vm.HaxeThread",
+		"ArrayIterator",
+		"haxe.ds.IntMapKeyIterator",
+		"haxe.ds.IntMapValueIterator",
+		"haxe.ds.ObjectMapKeyIterator",
+		"haxe.ds.ObjectMapValueIterator",
+		"haxe.ds.StringMapKeyIterator",
+		"haxe.ds.StringMapValueIterator",
+		"haxe.ds.WeakMapKeyIterator",
+		"haxe.ds.WeakMapValueIterator",
+		"haxe.ds.Entry",
+		"sys.io.ProcessInput",
+		"js.TypeError",
+		"js.RegExpMatch",
+		"js.ReferenceError",
+		"haxe.ds.StringMapIterator",
+		"js.RangeError",
+		"js.HaxeError",
+		"js.SyntaxError",
+		"js.html.ArrayBufferCompat",
+		"HaxeRegExp",
+		"js.EvalError",
+		"js.URIError",
+		"js.html.CanvasUtil",
+		"sys.thread.HaxeThread",
+		"haxe.zip.ExtraField",
+		"haxe.display.DisplayMethods",
+		"haxe.StackItem",
+		"haxe.display.ServerMethods",
+		"ValueType",
+		"haxe.crypto.HashMethod",
+		"haxe.display.Methods",
+		"haxe.display.NoData",
+		"haxe.rtti.Rights",
+		"haxe.rtti.TypeTree",
+		"haxe.TemplateExpr",
+		"haxe.xml.Filter",
+		"haxe.xml.Attrib",
+		"haxe.xml.Rule",
+		"haxe.xml.CheckResult",
+		"haxe.zip.State",
+		"haxe.NativeException"
+	];
 }
+// @formatter:on 
 
 /**
  * A ZIP file writer that allows individual entries to be written at one time; this prevents having to store all of the

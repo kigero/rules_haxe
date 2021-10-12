@@ -133,6 +133,38 @@ the symlinked HXML file* can be generated:
 bazel build //:gen-neko-hxml --define=bazel_project_dir=%cd%/bazel-validation
 ```
 
+## Haxe Std Lib
+
+Generates a standard library that can be used for downstream projects that may need Haxe code, especially if the
+`strip_haxe` parameter is being used when creating libraries.  Currently this is only really tested for Java - it's
+unknown yet whether other targets need this feature or not.  The intended use case is where you're building a reusable
+library in Haxe that gets included into a downstream jar; in that case you need the standard library to provide access
+to the core Haxe stuff.
+
+```
+haxe_std_lib(
+    name = "haxe-std-lib-java",
+    target = "java",
+)
+
+haxe_library(
+    name = "myjava-lib",
+    srcs = glob(["src/main/haxe/**/*.hx"]),
+    debug = True,
+    strip_haxe = True,
+    library_name = "myjava",
+)
+
+java_library(
+    name = "final-lib",
+    srcs = glob(["src/main/java/**/*.java"]),
+    deps = [
+        "//:myjava-lib",
+        "//:haxe-std-lib-java",
+    ],
+)
+```
+
 # Targets
 
 The targets that are currently actively supported are listed below; other targets may work.

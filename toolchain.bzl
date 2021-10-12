@@ -213,6 +213,35 @@ def haxe_create_test_class(ctx, srcs, out):
         command = command,
     )
 
+def haxe_create_std_build(ctx, target, out):
+    """
+    Create the main file for compiling the standard build.
+    
+    Args:
+        ctx: Bazel context.
+        target: The target of the build.
+        out: The StdBuild.hx file that calls the individual unit tests.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    if toolchain.internal.haxe_dir != ".":
+        command = toolchain.internal.haxe_dir + "/haxe"
+    else:
+        command = "haxe"
+
+    command += " -p " + toolchain.internal.utils_file.dirname
+    command += " --run Utils.hx genStdBuild "
+    if toolchain.internal.haxe_dir != ".":
+        command += toolchain.internal.haxe_dir
+    else:
+        command += "."
+    command += " " + target + " > " + out.path
+
+    ctx.actions.run_shell(
+        outputs = [out],
+        command = command,
+    )
+
 def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None):
     """
     Create the final jar file, which strips out haxe classes and adds source files.
@@ -437,6 +466,7 @@ def _haxe_toolchain_impl(ctx):
         compile = haxe_compile,
         haxelib_install = haxe_haxelib_install,
         create_test_class = haxe_create_test_class,
+        create_std_build = haxe_create_std_build,
         create_run_script = haxe_create_run_script,
         create_final_jar = haxe_create_final_jar,
         copy_cpp_includes = haxe_copy_cpp_includes,
