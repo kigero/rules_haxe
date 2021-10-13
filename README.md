@@ -139,14 +139,10 @@ Generates a standard library that can be used for downstream projects that may n
 `strip_haxe` parameter is being used when creating libraries.  Currently this is only really tested for Java - it's
 unknown yet whether other targets need this feature or not.  The intended use case is where you're building a reusable
 library in Haxe that gets included into a downstream jar; in that case you need the standard library to provide access
-to the core Haxe stuff.
+to the core Haxe stuff.  The best practice is to use the common target from this package as it reduces compilation times
+for multi-haxe project builds.
 
 ```
-haxe_std_lib(
-    name = "haxe-std-lib-java",
-    target = "java",
-)
-
 haxe_library(
     name = "myjava-lib",
     srcs = glob(["src/main/haxe/**/*.hx"]),
@@ -160,10 +156,12 @@ java_library(
     srcs = glob(["src/main/java/**/*.java"]),
     deps = [
         "//:myjava-lib",
-        "//:haxe-std-lib-java",
+        "@rules_haxe//:std-java",
     ],
 )
 ```
+
+You can instantiate the rule locally as well if necessary.
 
 # Targets
 

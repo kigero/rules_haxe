@@ -639,8 +639,13 @@ def _haxe_std_lib(ctx):
     )
 
     hxml = create_hxml_map(ctx, toolchain, for_std_build = True)
-    hxml["classpaths"].append(ctx.var["BINDIR"])
+    hxml["classpaths"].append(build_source_file.dirname)
     hxml["args"].append("--dce no")
+
+    # Handle the case where we're building in an external directory.
+    if hxml["external_dir"] != "":
+        ext_idx = build_source_file.path.find("external/")
+        hxml["external_dir"] = build_source_file.path[ext_idx:-11]
 
     build_file = ctx.actions.declare_file("{}-std-build.hxml".format(ctx.attr.name))
     create_build_hxml(ctx, toolchain, hxml, build_file, suffix = "-intermediate")
