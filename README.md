@@ -163,6 +163,11 @@ java_library(
 
 You can instantiate the rule locally as well if necessary.
 
+When using a local toolchain (`haxe_no_install`), this module will try to find the location of the Haxe installation
+that contains the Haxe source code.  It does this by running `which haxe`, and if found, the directory containing the
+haxe executable will be used to locate the source code.  This directory can also be overridden by passing the
+`HAXE_HOME` environment variable via an `action_env` parameter.
+
 # Targets
 
 The targets that are currently actively supported are listed below; other targets may work.

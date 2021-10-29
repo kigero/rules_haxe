@@ -240,6 +240,7 @@ def haxe_create_std_build(ctx, target, out):
     ctx.actions.run_shell(
         outputs = [out],
         command = command,
+        use_default_shell_env = True,
     )
 
 def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None):

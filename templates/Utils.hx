@@ -1,3 +1,4 @@
+import sys.io.Process;
 import haxe.display.Display.DisplayItem;
 import haxe.io.Path;
 import sys.io.File;
@@ -294,6 +295,29 @@ class Utils
 
 	private static function genStdBuild(haxeInstallDir:String, target:String)
 	{
+		if (haxeInstallDir == ".")
+		{
+			// First see if there is an environment variable that sets haxe home.
+			var haxeHome = Sys.getEnv("HAXE_HOME");
+			if (haxeHome == null)
+			{
+				// If there is no environment variable, see if we can find it.
+				try
+				{
+					var p = new Process("which", ["haxe"]);
+					p.exitCode(true);
+					var haxePath = p.stdout.readLine();
+					haxeInstallDir = Path.directory(haxePath);
+				} catch (e:Any)
+				{
+					//
+				}
+			}
+			else
+			{
+				haxeInstallDir = haxeHome;
+			}
+		}
 		var files = new Array<String>();
 		findHXFiles(haxeInstallDir + "/std", files, [], false, "std/");
 		findHXFiles(haxeInstallDir + "/std/haxe", files, ["std/haxe/macro/"], true, "std/haxe/");
