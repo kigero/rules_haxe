@@ -311,7 +311,7 @@ def haxe_create_run_script(ctx, target, lib_name, out):
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    if toolchain.internal.neko_dir:
+    if toolchain.internal.neko_dir != ".":
         neko_path = toolchain.internal.neko_dir + "/neko"
     else:
         neko_path = "neko"
