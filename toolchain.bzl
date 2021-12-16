@@ -347,9 +347,9 @@ def haxe_create_run_script(ctx, target, lib_name, out):
         script_content += " %*"
     else:
         if toolchain.internal.haxe_dir:
-            script_content += "export PATH={};$PATH\n".format(toolchain.internal.haxe_dir)
+            script_content += "export PATH={}:$PATH\n".format(toolchain.internal.haxe_dir)
         if toolchain.internal.neko_dir:
-            script_content += "export PATH={};$PATH\n".format(toolchain.internal.neko_dir)
+            script_content += "export PATH={}:$PATH\n".format(toolchain.internal.neko_dir)
         for e in toolchain.internal.env:
             script_content += "export {}={}\n".format(e, toolchain.internal.env[e])
 
