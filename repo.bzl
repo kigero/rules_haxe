@@ -76,14 +76,24 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
     )
 
     # Create the haxelib directory...
-    ctx.execute(
-        ["mkdir", "-p", "haxelib_dir"],
-    )
+    if os == "windows":
+        ctx.execute(
+            ["mkdir", "haxelib_dir"],
+        )
+    else:
+        ctx.execute(
+            ["mkdir", "-p", "haxelib_dir"],
+        )
 
     # ...and a file that can be used to find it in the toolchain.
-    ctx.execute(
-        ["touch", "haxelib_dir/haxelib_file"],
-    )
+    if os == "windows":
+        ctx.execute(
+            ["copy", "NUL", "haxelib_dir\\haxelib_file"],
+        )
+    else:
+        ctx.execute(
+            ["touch", "haxelib_dir/haxelib_file"],
+        )
 
 def _haxe_download_impl(ctx):
     _setup(ctx, ctx.attr.haxe_url, ctx.attr.haxe_sha256, ctx.attr.neko_url, ctx.attr.neko_sha256, ctx.attr.os, ctx.attr.arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl, ctx.attr._run_script, ctx.attr._haxelib_install_script, ctx.attr._postprocess_hxcpp_script, ctx.attr._copy_hxcpp_includes_script, ctx.attr._postprocess_dox_script)
