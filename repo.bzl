@@ -77,8 +77,8 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
 
     # Create the haxelib directory...
     if os == "windows":
-        ctx.execute(
-            ["mkdir", "haxelib_dir"],
+        res = ctx.execute(
+            ["cmd", "/c", "mkdir", "haxelib_dir"],
         )
     else:
         ctx.execute(
@@ -87,8 +87,8 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
 
     # ...and a file that can be used to find it in the toolchain.
     if os == "windows":
-        ctx.execute(
-            ["copy", "NUL", "haxelib_dir\\haxelib_file"],
+        res = ctx.execute(
+            ["cmd", "/c", "copy", "NUL", "haxelib_dir\\haxelib_file"],
         )
     else:
         ctx.execute(
