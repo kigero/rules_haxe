@@ -460,7 +460,10 @@ def _haxe_toolchain_impl(ctx):
         "hxjava": "3.2.0",
     }
 
-    haxe_cpp_toolchain = ctx.attr.cpp_toolchain[platform_common.ToolchainInfo]
+    if platform_common.ToolchainInfo in ctx.attr.cpp_toolchain:
+        haxe_cpp_toolchain = ctx.attr.cpp_toolchain[platform_common.ToolchainInfo]
+    else:
+        haxe_cpp_toolchain = ctx.attr.cpp_toolchain[cc_common.CcToolchainInfo]
 
     return [platform_common.ToolchainInfo(
         # Public toolchain interface.
