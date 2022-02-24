@@ -17,6 +17,7 @@ class Utils
 
 		var pkg = null;
 		var clsNames = new Array<String>();
+		var privateClasses = new Array<String>();
 		var inComment = false;
 		for (idx in 0...lines.length)
 		{
@@ -80,7 +81,29 @@ class Utils
 							clsName = clsName.substring(0, clsName.indexOf("<"));
 						}
 
-						if (clsName.toLowerCase() != "abstract")
+						if (clsName.toLowerCase() == "abstract")
+						{
+							continue;
+						}
+
+						var isPrivate = false;
+						if (idx > 0)
+						{
+							for (i in 0...idx)
+							{
+								if (tokens[i] == "private")
+								{
+									isPrivate = true;
+									break;
+								}
+							}
+						}
+
+						if (isPrivate)
+						{
+							privateClasses.push(clsName);
+						}
+						else
 						{
 							clsNames.push(clsName);
 						}
@@ -96,9 +119,19 @@ class Utils
 
 		if (pkg != null)
 		{
+			var mainClassName = null;
+
 			for (idx in 0...clsNames.length)
 			{
+				if (idx == 0)
+				{
+					mainClassName = clsNames[0];
+				}
 				clsNames[idx] = '$pkg.${clsNames[idx]}';
+			}
+			for (idx in 0...privateClasses.length)
+			{
+				clsNames.push('$pkg._$mainClassName.${privateClasses[idx]}');
 			}
 		}
 
@@ -139,7 +172,6 @@ class Utils
 			for (fqcn in fqcns)
 			{
 				fqcn = fqcn.replace(".", "/");
-
 				toKeep.push(fqcn);
 			}
 		}
