@@ -364,7 +364,7 @@ class Utils
 		{
 			for (cls in findFQCN(haxeInstallDir + "/" + file))
 			{
-				if (!classes.contains(cls) && !EXCLUDED_CLASSES.contains(cls) && !cls.startsWith(";"))
+				if (!classes.contains(cls) && !EXCLUDED_CLASSES.contains(cls) && !cls.startsWith(";") && !cls.contains("_"))
 				{
 					classes.push(cls);
 				}
