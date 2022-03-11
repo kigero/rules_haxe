@@ -383,7 +383,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 
     # Debug
     if hxml["debug"] != None:
-        content += "-debug\n"
+        content += "--debug\n"
 
     # Classpaths
     for classpath in hxml["classpaths"]:
