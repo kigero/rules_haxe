@@ -228,7 +228,7 @@ def haxe_create_std_build(ctx, target, out):
         command = toolchain.internal.haxe_dir + "/haxe"
     else:
         command = "haxe"
-
+    command = "pwd && " + command
     command += " -p " + toolchain.internal.utils_file.dirname
     command += " --run Utils.hx genStdBuild "
     if toolchain.internal.haxe_dir != ".":
@@ -236,6 +236,8 @@ def haxe_create_std_build(ctx, target, out):
     else:
         command += "."
     command += " " + target + " > " + out.path
+
+    print(command)
 
     ctx.actions.run_shell(
         outputs = [out],
