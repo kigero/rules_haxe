@@ -482,7 +482,8 @@ class Utils
 		"haxe.xml.Rule",
 		"haxe.xml.CheckResult",
 		"haxe.zip.State",
-		"haxe.NativeException"
+        "haxe.NativeException",
+        "sys.thread.NextEventTime"
 	];
 }
 // @formatter:on 

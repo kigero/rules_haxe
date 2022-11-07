@@ -4,14 +4,19 @@ load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
 
 # Allow these rules to be used within unit tests.
-load("//:def.bzl", "haxe_download_windows_amd64")
+load("//:def.bzl", "haxe_download_windows_amd64", "haxe_no_install")
 
 haxe_download_windows_amd64(
     name = "haxe_windows_amd64",
 )
 
+haxe_no_install(
+    name = "haxe_no_install",
+)
+
 register_toolchains(
     "@haxe_windows_amd64//:toolchain",
+    "@haxe_no_install//:toolchain",
 )
 
 # Skylib, for unit testing.

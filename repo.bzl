@@ -161,6 +161,10 @@ def _haxe_download_version(ctx):
                         "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.1.2/haxe-4.1.2-win64.zip",
                         "sha256": "a75a685f7ab975fa4749ba990e8aeb395403ab2e977ffecfe5321fc9c6c7000b",
                     },
+                    "4.2.5": {
+                        "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-win64.zip",
+                        "sha256": "9e7913999eb3693d540926219b45107b3dc249feb44204c0378fcdc6a74a9132",
+                    },
                 },
                 "neko": {
                     "2.3.0": {
