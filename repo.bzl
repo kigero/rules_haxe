@@ -165,6 +165,10 @@ def _haxe_download_version(ctx):
                         "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.2.5/haxe-4.2.5-win64.zip",
                         "sha256": "9e7913999eb3693d540926219b45107b3dc249feb44204c0378fcdc6a74a9132",
                     },
+                    "4.3.1": {
+                        "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.3.1/haxe-4.3.1-win64.zip",
+                        "sha256": "8f77bf1dc3fae88b3174e311c60e69ab25c02093a0801bd3e49b28609f465e1e",
+                    },
                 },
                 "neko": {
                     "2.3.0": {
@@ -180,6 +184,10 @@ def _haxe_download_version(ctx):
                     "4.1.2": {
                         "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.1.2/haxe-4.1.2-linux64.tar.gz",
                         "sha256": "c82f9d72e4a2c2ae228284d55a7f1bf6c7e6410e127bf1061a0152683edd1d48",
+                    },
+                    "4.3.1": {
+                        "url": "https://github.com/HaxeFoundation/haxe/releases/download/4.3.1/haxe-4.3.1-linux64.tar.gz",
+                        "sha256": "4cd04df5edf10f7d15c401ceca83f96ec23b379292abc2ef0bfea1b60badf2a3",
                     },
                 },
                 "neko": {
@@ -215,7 +223,7 @@ haxe_download_windows_amd64 = repository_rule(
     implementation = _haxe_download_version,
     attrs = {
         "haxe_version": attr.string(
-            default = "4.1.2",
+            default = "4.3.1",
             doc = "The haxe version to get.",
         ),
         "neko_version": attr.string(
@@ -257,7 +265,7 @@ haxe_download_linux_amd64 = repository_rule(
     implementation = _haxe_download_version,
     attrs = {
         "haxe_version": attr.string(
-            default = "4.1.2",
+            default = "4.3.1",
             doc = "The haxe version to get.",
         ),
         "neko_version": attr.string(
