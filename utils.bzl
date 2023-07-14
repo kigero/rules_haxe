@@ -215,6 +215,11 @@ def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
 
     hxml["source_files"] = list()
     for src in find_direct_sources(ctx):
+        # The compiler throws errors on some specific target/package combinations - like including a "java.*" package
+        # when compiling for neko, even if the contents of those files are conditionally compiled out.  So just keep
+        # them out of the HXML data entirely.
+        if hxml["target"] != "java" and "java/" in src.path:
+            continue
         hxml["source_files"].append(src.path)
 
     hxml["resources"] = dict()
