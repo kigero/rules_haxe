@@ -456,8 +456,8 @@ def _haxe_toolchain_impl(ctx):
     }
 
     haxelib_language_versions = {
-        "hxcpp": "4.1.15",
-        "hxjava": "3.2.0",
+        "hxcpp": "4.3.12",
+        "hxjava": "4.2.0",
     }
 
     if platform_common.ToolchainInfo in ctx.attr.cpp_toolchain:
