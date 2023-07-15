@@ -88,14 +88,21 @@ shift
 
 DOTTED_VERSION=$1
 COMMA_VERSION=${DOTTED_VERSION//./,}
+
 # See if this version is already installed.
 haxelib path $DOTTED_LIB:$DOTTED_VERSION > $OUTPUT || EXIT_CODE=$?
+
 if [[ "$EXIT_CODE" -eq 0 ]]; then
     exit 0
 fi
 
 # It's not, so install it into the common haxelib directory.
 cd $LIN_HAXELIB_PATH
+
+# If the library folder already exists, then we're installing a different version of this library: remove the existing one.
+if [ -d "$COMMA_LIB" ]; then
+    rm -rf $COMMA_LIB
+fi
 
 # Create the comma version of the library name if needed.
 mkdir -p $COMMA_LIB

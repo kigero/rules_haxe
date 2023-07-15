@@ -174,6 +174,16 @@ that contains the Haxe source code. It does this by running `which haxe`, and if
 haxe executable will be used to locate the source code. This directory can also be overridden by passing the
 `HAXE_HOME` environment variable via an `action_env` parameter.
 
+# Haxelibs
+
+Dependent haxelibs can be a bit tricky at times.
+
+-   To avoid multiple installations of the same version of a haxelib, a locking mechanism is used. If a haxelib install
+    fails, the next time the process is run you will encounter a timeout period; after this period, the lock will be
+    cleared and the install can be tried again. The lock may also be manually cleared by removing the directory at
+    `bazel-projectname/external/haxe_os_cpu/haxelib_install.sh.lib`.
+-   If there are errors when changing versions, a `bazel clean` should handle the issue.
+
 # Targets
 
 The targets that are currently actively supported are listed below; other targets may work.
