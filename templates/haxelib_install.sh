@@ -18,10 +18,18 @@
 # parallel.  Since there's a check early to see if the lib is already installed, it should return pretty quickly if two
 # installs get kicked off at once. To support shell environments without flock (like mingw's bash, which comes with
 # Git), this uses a solution with a directory as the lock file.  There are definitely cases where this can fail, but in
-# those cases a bazel clean should make things work again.
+# those cases a bazel clean should make things work again. 
+# --EDIT-- 
+# The approach above is still relatively valid, but the "case where this can fail" happens more often than I'd like it
+# to.  What happens is if the haxelib install fails for some reason - including a ctrl-c in bazel, which kill -9's the
+# process - the lock directory is kept around (you can't trap kill -9).  So the next time you run the process you have
+# to manually clean up the lock file.  I'm loosening the logic here a bit: remove the lock file automatically after the
+# timeout, so that the next time the process runs it will hopefully work, and allowing different libs to be installed in
+# parallel, so at least some installs can proceed in the bad case, and in the good case it doesn't take as long to
+# compile everything.
 
-LOCKDIR="`realpath $0`.lock"
-trap "rmdir $LOCKDIR" EXIT
+LOCKDIR="`realpath $0`.lock.$6"
+trap "rmdir $LOCKDIR 2> /dev/null" EXIT
 i="1"
 # Wait at most 120 seconds.
 while [ $i -lt 120 ]
@@ -37,8 +45,7 @@ done
 
 if [ $i -gt 119 ]
 then
-    trap "" EXIT
-    echo "Timed out waiting for lock."
+    echo "Timed out waiting for lock - removing lock directory, try the command again or see above for more errors."
     exit 1
 fi
 
