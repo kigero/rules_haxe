@@ -203,7 +203,7 @@ def haxe_create_test_class(ctx, srcs, out):
         command = "haxe"
 
     command += " -p " + toolchain.internal.utils_file.dirname
-    command += " --run Utils.hx genMainTest"
+    command += " --run RulesHaxeUtils.hx genMainTest"
     for f in srcs:
         command += " " + f.path
     command += " > " + out.path
@@ -230,7 +230,7 @@ def haxe_create_std_build(ctx, target, out):
         command = "haxe"
 
     command += " -p " + toolchain.internal.utils_file.dirname
-    command += " --run Utils.hx genStdBuild "
+    command += " --run RulesHaxeUtils.hx genStdBuild "
     if toolchain.internal.haxe_dir != ".":
         command += toolchain.internal.haxe_dir
     else:
@@ -264,7 +264,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
     else:
         command = "haxe"
     command += " -p " + toolchain.internal.utils_file.dirname
-    command += " --run Utils.hx createFinalJar {}/{} {}/{} {} {}".format(intermediate.path, jar_name, output.path, jar_name, "true" if strip else "false", "true" if include_sources else "false")
+    command += " --run RulesHaxeUtils.hx createFinalJar {}/{} {}/{} {} {}".format(intermediate.path, jar_name, output.path, jar_name, "true" if strip else "false", "true" if include_sources else "false")
     for file in srcs:
         command += " " + file.path
 
@@ -413,7 +413,7 @@ def _haxe_toolchain_impl(ctx):
             neko_cmd = f
         if f.path.endswith("/haxelib_file"):
             haxelib_file = f
-        if f.path.endswith("/Utils.hx"):
+        if f.path.endswith("/RulesHaxeUtils.hx"):
             utils_file = f
         if f.path.endswith("/run_haxe.sh"):
             run_haxe_file = f
@@ -439,7 +439,7 @@ def _haxe_toolchain_impl(ctx):
     if not haxelib_file:
         fail("could not locate haxelib file")
     if not utils_file:
-        fail("could not locate Utils.hx file")
+        fail("could not locate RulesHaxeUtils.hx file")
     if not run_haxe_file:
         fail("could not locate run_haxe.sh file")
     if not haxelib_install_file:

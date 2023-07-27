@@ -51,7 +51,7 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
 
     ctx.report_progress("Generating utility scripts")
     ctx.template(
-        "Utils.hx",
+        "RulesHaxeUtils.hx",
         gen_utils_tpl,
     )
     ctx.template(
@@ -132,7 +132,7 @@ haxe_download = repository_rule(
             default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
         ),
         "_gen_utils_tpl": attr.label(
-            default = "@rules_haxe//:templates/Utils.hx",
+            default = "@rules_haxe//:templates/RulesHaxeUtils.hx",
         ),
         "_run_script": attr.label(
             default = "@rules_haxe//:templates/run_haxe.sh",
@@ -240,7 +240,7 @@ haxe_download_windows_amd64 = repository_rule(
             default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
         ),
         "_gen_utils_tpl": attr.label(
-            default = "@rules_haxe//:templates/Utils.hx",
+            default = "@rules_haxe//:templates/RulesHaxeUtils.hx",
         ),
         "_run_script": attr.label(
             default = "@rules_haxe//:templates/run_haxe.sh",
@@ -282,7 +282,7 @@ haxe_download_linux_amd64 = repository_rule(
             default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
         ),
         "_gen_utils_tpl": attr.label(
-            default = "@rules_haxe//:templates/Utils.hx",
+            default = "@rules_haxe//:templates/RulesHaxeUtils.hx",
         ),
         "_run_script": attr.label(
             default = "@rules_haxe//:templates/run_haxe.sh",
@@ -319,7 +319,7 @@ haxe_no_install = repository_rule(
             default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
         ),
         "_gen_utils_tpl": attr.label(
-            default = "@rules_haxe//:templates/Utils.hx",
+            default = "@rules_haxe//:templates/RulesHaxeUtils.hx",
         ),
         "_run_script": attr.label(
             default = "@rules_haxe//:templates/run_haxe.sh",
