@@ -459,7 +459,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         command = "mv {} {}".format(build_file_1.path, out_file.path),
     )
 
-def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, output_file = None, library_name = None):
+def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file = None, output_file = None, library_name = None):
     """
     Determine an appropriate provider response based on the input context and the compilation target.
 
@@ -475,7 +475,10 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
     Returns:
         An array of providers.
     """
-    runfiles = [out_dir]
+    runfiles = []
+    if out_dir != None:
+        runfiles.append(out_dir)
+
     if launcher_file != None:
         runfiles.append(launcher_file)
         runfiles += toolchain.internal.tools
@@ -498,10 +501,14 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir, launcher_file = None, 
     if hasattr(ctx.files, "resources"):
         resources = ctx.files.resources
 
+    def_info_files = find_direct_sources(ctx)
+    if out_dir != None:
+        def_info_files.append(out_dir)
+
     rtrn = [
         DefaultInfo(
-            files = depset([out_dir] + find_direct_sources(ctx)),
-            runfiles = ctx.runfiles(files = runfiles),
+            files = depset(def_info_files),
+            runfiles = ctx.runfiles(files = runfiles + resources),
             executable = launcher_file,
         ),
         HaxeLibraryInfo(

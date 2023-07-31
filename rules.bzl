@@ -400,6 +400,13 @@ def _resolve_path(local_refs, workspace_path, path):
             return "{}/{}".format(local_refs[parts[1]], "/".join(parts[2:]))
         else:
             return "{}/{}".format(workspace_path, path)
+    elif "bin/external" in path:
+        # Hacky workaround to find the path of the resource in the bin directory.
+        idx = path.find("bin/external")
+        slash_idx = workspace_path.rfind("/")
+        if slash_idx == -1:
+            slash_idx = workspace_path.rfind("\\")
+        return workspace_path[:slash_idx] + "/" + path[idx:]
 
     return path
 
@@ -440,11 +447,7 @@ def _haxe_gen_hxml(ctx):
     build_file = ctx.actions.declare_file(build_file_name)
     create_build_hxml(ctx, toolchain, hxml, build_file)
 
-    return [
-        DefaultInfo(
-            files = depset([build_file]),
-        ),
-    ]
+    return calc_provider_response(ctx, toolchain, hxml, launcher_file = build_file)
 
 haxe_gen_hxml = rule(
     doc = "Generate an HXML file for a particular configuration.  This is useful to configure the VSHaxe plugin of VSCode.",
@@ -464,6 +467,10 @@ haxe_gen_hxml = rule(
         "target": attr.string(
             default = "neko",
             doc = "Target platform.",
+        ),
+        "resources": attr.label_list(
+            allow_files = True,
+            doc = "Resources to include in the final build.",
         ),
         "haxelibs": attr.string_dict(
             doc = "A dict of haxelib names to versions or git repositories (either the version or git repo is required) that the library depends on.",
