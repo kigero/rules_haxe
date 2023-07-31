@@ -284,7 +284,7 @@ def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
                     hxml["args"].append(arg)
 
     is_external = ctx.label.workspace_root.startswith("external")
-    hxml["external_dir"] = "external/{}/".format(hxml["name"]) if is_external else ""
+    hxml["external_dir"] = "/".join(ctx.label.workspace_root.split("/")[:2]) + "/" if is_external else ""
 
     return hxml
 
