@@ -714,3 +714,108 @@ haxe_std_lib = rule(
         ),
     },
 )
+
+###############################################################################
+
+def _haxe_haxelib_lib(ctx):
+    """
+    _haxe_haxelib_lib implementation.
+    
+    Args:
+        ctx: Bazel context.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    build_source_file = ctx.actions.declare_file("HaxelibBuild.hx")
+    toolchain.create_haxelib_build(
+        ctx,
+        ctx.attr.haxelib,
+        ctx.attr.version,
+        ctx.attr.target,
+        build_source_file,
+        ctx.attr.include,
+    )
+
+    # This isn't for the standard build, but setting that to True here gives us a similar build, which is what we want.
+    hxml = create_hxml_map(ctx, toolchain, for_std_build = True)
+    hxml["classpaths"].append(build_source_file.dirname)
+    hxml["args"].append("--dce no")
+    hxml["main_class"] = "HaxelibBuild"
+    hxml["libs"][ctx.attr.haxelib] = ctx.attr.version
+
+    # Handle the case where we're building in an external directory.
+    if hxml["external_dir"] != "":
+        ext_idx = build_source_file.path.find("external/")
+        hxml["external_dir"] = build_source_file.path[ext_idx:-11]
+
+    build_file = ctx.actions.declare_file("{}-haxelib-build.hxml".format(ctx.attr.name))
+    create_build_hxml(ctx, toolchain, hxml, build_file, suffix = "-intermediate")
+
+    intermediate = ctx.actions.declare_directory(hxml["output_dir"])
+
+    # Do the compilation.
+    runfiles = [build_source_file] + find_direct_sources(ctx) + find_direct_resources(ctx)
+
+    toolchain.compile(
+        ctx,
+        hxml = build_file,
+        runfiles = runfiles,
+        out = intermediate,
+    )
+
+    # Post process the output file.
+    output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
+    output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
+
+    if hxml["target"] == "java":
+        toolchain.create_final_jar(
+            ctx,
+            find_direct_sources(ctx),
+            intermediate,
+            output,
+            hxml["output_file"],
+            False,
+            output_file = output_file,
+        )
+    else:
+        inputs = [intermediate]
+        hxcpp_include_dir = None
+        if hxml["target"] == "cpp":
+            hxcpp_include_dir = ctx.actions.declare_directory("hxcpp_includes")
+            toolchain.copy_cpp_includes(ctx, hxcpp_include_dir)
+            inputs.append(hxcpp_include_dir)
+
+        cmd = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path)
+        if hxcpp_include_dir != None:
+            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output.path, hxml["name"])
+
+        ctx.actions.run_shell(
+            outputs = [output, output_file],
+            inputs = inputs,
+            command = cmd,
+            use_default_shell_env = True,
+        )
+    return calc_provider_response(ctx, toolchain, hxml, output, output_file = output_file, library_name = ctx.attr.haxelib)
+
+haxe_haxelib_lib = rule(
+    doc = "Generate a haxelib library such that it can be used as a dependency.",
+    implementation = _haxe_haxelib_lib,
+    toolchains = ["@rules_haxe//:toolchain_type"],
+    attrs = {
+        "haxelib": attr.string(
+            mandatory = True,
+            doc = "Haxelib name.",
+        ),
+        "version": attr.string(
+            mandatory = True,
+            doc = "Haxelib version.",
+        ),
+        "target": attr.string(
+            default = "neko",
+            doc = "Target platform.",
+        ),
+        "include": attr.string_list(
+            doc = "Classpath prefixes to include - if not set, all will be included..",
+        ),
+    },
+)

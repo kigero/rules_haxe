@@ -378,6 +378,49 @@ class RulesHaxeUtils
 		Sys.println("class StdBuild{ public static function main(){} }");
 	}
 
+	private static function genHaxelibBuild(haxelibDir:String, name:String, version:String, target:String, includeClasspaths:Array<String>)
+	{
+		var haxelibInstallDir = haxelibDir + "/" + name + "/" + StringTools.replace(version, ".", ",");
+		var files = new Array<String>();
+		// This is incorrect - it will need to read the haxelib.json file to figure out the right classpaths.
+		findHXFiles(haxelibInstallDir + "/std", files, [], true, "std/");
+
+		var classes = new Array<String>();
+		for (file in files)
+		{
+			for (cls in findFQCN(haxelibInstallDir + "/" + file))
+			{
+				if (!classes.contains(cls) && !cls.startsWith(";") && !cls.contains("_"))
+				{
+					if (includeClasspaths.length > 0)
+					{
+						var found = false;
+						for (inc in includeClasspaths)
+						{
+							if (StringTools.startsWith(cls, inc))
+							{
+								found = true;
+								break;
+							}
+						}
+
+						if (!found)
+						{
+							continue;
+						}
+					}
+					classes.push(cls);
+				}
+			}
+		}
+
+		for (cls in classes)
+		{
+			Sys.println("import " + cls + ";");
+		}
+		Sys.println("class HaxelibBuild{ public static function main(){} }");
+	}
+
 	static public function main()
 	{
 		var args = Sys.args();
@@ -397,6 +440,9 @@ class RulesHaxeUtils
 
 			case "genStdBuild":
 				genStdBuild(args[1], args[2]);
+
+			case "genHaxelibBuild":
+				genHaxelibBuild(args[1], args[2], args[3], args[4], args.slice(5));
 
 			default:
 				throw 'Bad action ${args[0]}';

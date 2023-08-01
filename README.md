@@ -174,6 +174,21 @@ that contains the Haxe source code. It does this by running `which haxe`, and if
 haxe executable will be used to locate the source code. This directory can also be overridden by passing the
 `HAXE_HOME` environment variable via an `action_env` parameter.
 
+## Haxelib Build
+
+In some instances you need to compile a haxelib directly to a target language - similar to the standard lib above.
+That's what this rule is for. This configuration would compile the _hx3compat_ lib to java.
+
+```
+haxe_haxelib_lib(
+    name = "hx3compat",
+    include = ["haxe.unit"],
+    haxelib = "hx3compat",
+    target = "java",
+    version = "1.0.4",
+)
+```
+
 # Haxelibs
 
 Dependent haxelibs can be a bit tricky at times.

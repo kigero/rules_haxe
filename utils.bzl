@@ -156,6 +156,7 @@ def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
         toolchain: The Haxe toolchain instance.
         for_test: True if build parameters for unit testing should be added, False otherwise.
         for_std_build: True if build parameters for the standard build should be added, False otherwise.
+        override_main_class: If set, use this as the main class name.
 
     Returns:
         A dict containing the HXML properties.

@@ -243,6 +243,46 @@ def haxe_create_std_build(ctx, target, out):
         use_default_shell_env = True,
     )
 
+def haxe_create_haxelib_build(ctx, haxelib, version, target, out, includes = None):
+    """
+    Create the main file for compiling a haxelib build.
+    
+    Args:
+        ctx: Bazel context.
+        haxelib: The name of the haxelib.
+        version: The version of the haxelib.
+        target: The target of the build.
+        out: The HaxelibBuild.hx file that calls the individual classes.
+        includes: Optional classpath includes.
+    """
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    # Make sure the lib is installed.
+    install_out = haxe_haxelib_install(ctx, haxelib, version)
+
+    if toolchain.internal.haxe_dir != ".":
+        command = toolchain.internal.haxe_dir + "/haxe"
+    else:
+        command = "haxe"
+
+    command += " -p " + toolchain.internal.utils_file.dirname
+    command += " --run RulesHaxeUtils.hx genHaxelibBuild "
+    command += toolchain.internal.env["HAXELIB_PATH"] + " "
+    command += haxelib + " "
+    command += version
+    command += " " + target
+    if includes != None:
+        for inc in includes:
+            command += " " + inc
+    command += " > " + out.path
+
+    ctx.actions.run_shell(
+        inputs = [install_out],
+        outputs = [out],
+        command = command,
+        use_default_shell_env = True,
+    )
+
 def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None):
     """
     Create the final jar file, which strips out haxe classes and adds source files.
@@ -471,6 +511,7 @@ def _haxe_toolchain_impl(ctx):
         haxelib_install = haxe_haxelib_install,
         create_test_class = haxe_create_test_class,
         create_std_build = haxe_create_std_build,
+        create_haxelib_build = haxe_create_haxelib_build,
         create_run_script = haxe_create_run_script,
         create_final_jar = haxe_create_final_jar,
         copy_cpp_includes = haxe_copy_cpp_includes,
