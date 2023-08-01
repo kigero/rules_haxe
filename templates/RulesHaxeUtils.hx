@@ -197,7 +197,11 @@ class RulesHaxeUtils
 					var inZip = false;
 					for (fqcn in toKeep)
 					{
-						if (entry.fileName.startsWith(fqcn))
+						// HXParse is a special case, as it generates classes that we need to keep.  This is likely not
+						// a one-off issue.  TThe right answer here is to allow the caller to pass in a list of
+						// classpaths that they want to keep, along with the non-stripped classes.  That will take a
+						// little while to work through, so for hxparse, use a stop gap.
+						if (entry.fileName.startsWith(fqcn) || entry.fileName.startsWith("hxparse/"))
 						{
 							inZip = true;
 							break;
