@@ -283,7 +283,7 @@ def haxe_create_haxelib_build(ctx, haxelib, version, target, out, includes = Non
         use_default_shell_env = True,
     )
 
-def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None):
+def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None, for_haxelib = False, no_strip = []):
     """
     Create the final jar file, which strips out haxe classes and adds source files.
     
@@ -296,6 +296,8 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
         strip: Strip out haxe classes.
         include_sources: Include the Java sources in the jar.
         output_file: The output file to create.
+        for_haxelib: If this is for a haxelib build.
+        no_strip: Packages that should never be stripped out.
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
@@ -304,7 +306,12 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
     else:
         command = "haxe"
     command += " -p " + toolchain.internal.utils_file.dirname
-    command += " --run RulesHaxeUtils.hx createFinalJar {}/{} {}/{} {} {}".format(intermediate.path, jar_name, output.path, jar_name, "true" if strip else "false", "true" if include_sources else "false")
+    command += " --run RulesHaxeUtils.hx createFinalJar {}/{} {}/{} {} {} {}".format(intermediate.path, jar_name, output.path, jar_name, "true" if strip else "false", "true" if include_sources else "false", "true" if for_haxelib else "false")
+    if len(no_strip) == 0:
+        command += " _"
+    else:
+        command += " " + ",".join(no_strip)
+
     for file in srcs:
         command += " " + file.path
 

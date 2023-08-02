@@ -162,9 +162,28 @@ class RulesHaxeUtils
 		}
 	}
 
-	private static function createFinalJar(intermediatePath:String, outputPath:String, srcs:Array<String>, strip = true, includeSources = true)
+	private static function createFinalJar(intermediatePath:String, outputPath:String, srcs:Array<String>, strip = true, includeSources = true,
+			forHaxelib = false, noStrip:Array<String>)
 	{
+		if (noStrip.length == 1 && noStrip[0] == "_")
+		{
+			noStrip.remove(noStrip[0]);
+		}
+		else
+		{
+			for (x in 0...noStrip.length)
+			{
+				noStrip[x] = noStrip[x].replace(".", "/");
+			}
+		}
+
 		var toKeep = new Array<String>();
+
+		if (forHaxelib && srcs.length == 0)
+		{
+			var srcDir = intermediatePath.substring(0, intermediatePath.lastIndexOf("/")) + "/src";
+			findHXOrJavaFiles(srcDir, srcs, [], true, srcDir + "/", false);
+		}
 
 		for (src in srcs)
 		{
@@ -172,7 +191,22 @@ class RulesHaxeUtils
 			for (fqcn in fqcns)
 			{
 				fqcn = fqcn.replace(".", "/");
-				toKeep.push(fqcn);
+
+				if (!forHaxelib)
+				{
+					toKeep.push(fqcn);
+				}
+				else if (noStrip.length > 0)
+				{
+					for (prefix in noStrip)
+					{
+						if (StringTools.startsWith(fqcn, prefix))
+						{
+							toKeep.push(fqcn);
+							break;
+						}
+					}
+				}
 			}
 		}
 
@@ -300,16 +334,16 @@ class RulesHaxeUtils
 		Sys.println("\t\t}\n\t}\n}\n");
 	}
 
-	private static function findHXFiles(path:String, output:Array<String>, exclude:Array<String>, recursive = true, relPath = "")
+	private static function findHXOrJavaFiles(path:String, output:Array<String>, exclude:Array<String>, recursive = true, relPath = "", findHx = true)
 	{
 		for (child in FileSystem.readDirectory(path))
 		{
 			var fullPath = path + "/" + child;
 			if (recursive && FileSystem.isDirectory(fullPath))
 			{
-				findHXFiles(fullPath, output, exclude, recursive, relPath + child + "/");
+				findHXOrJavaFiles(fullPath, output, exclude, recursive, relPath + child + "/", findHx);
 			}
-			else if (child.endsWith(".hx"))
+			else if ((findHx && child.endsWith(".hx")) || (!findHx && child.endsWith(".java")))
 			{
 				var fullRelPath = relPath + child;
 				var isExcluded = false;
@@ -355,12 +389,12 @@ class RulesHaxeUtils
 			}
 		}
 		var files = new Array<String>();
-		findHXFiles(haxeInstallDir + "/std", files, [], false, "std/");
-		findHXFiles(haxeInstallDir + "/std/haxe", files, ["std/haxe/macro/"], true, "std/haxe/");
-		findHXFiles(haxeInstallDir + "/std/" + target, files, [], true, "std/" + target + "/");
+		findHXOrJavaFiles(haxeInstallDir + "/std", files, [], false, "std/");
+		findHXOrJavaFiles(haxeInstallDir + "/std/haxe", files, ["std/haxe/macro/"], true, "std/haxe/");
+		findHXOrJavaFiles(haxeInstallDir + "/std/" + target, files, [], true, "std/" + target + "/");
 		if (target != "js")
 		{
-			findHXFiles(haxeInstallDir + "/std/sys", files, [], true, "std/sys/");
+			findHXOrJavaFiles(haxeInstallDir + "/std/sys", files, [], true, "std/sys/");
 		}
 
 		var classes = new Array<String>();
@@ -387,7 +421,7 @@ class RulesHaxeUtils
 		var haxelibInstallDir = haxelibDir + "/" + name + "/" + StringTools.replace(version, ".", ",");
 		var files = new Array<String>();
 		// This is incorrect - it will need to read the haxelib.json file to figure out the right classpaths.
-		findHXFiles(haxelibInstallDir + "/std", files, [], true, "std/");
+		findHXOrJavaFiles(haxelibInstallDir + "/std", files, [], true, "std/");
 
 		var classes = new Array<String>();
 		for (file in files)
@@ -437,7 +471,7 @@ class RulesHaxeUtils
 		switch (args[0])
 		{
 			case "createFinalJar":
-				createFinalJar(args[1], args[2], args.slice(5), args[3] == "true", args[4] == "true");
+				createFinalJar(args[1], args[2], args.slice(7), args[3] == "true", args[4] == "true", args[5] == "true", args[6].split(","));
 
 			case "genMainTest":
 				genMainTest(args.slice(1));

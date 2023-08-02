@@ -774,8 +774,11 @@ def _haxe_haxelib_lib(ctx):
             intermediate,
             output,
             hxml["output_file"],
-            False,
+            True,
+            True,
             output_file = output_file,
+            for_haxelib = True,
+            no_strip = ctx.attr.include,
         )
     else:
         inputs = [intermediate]
