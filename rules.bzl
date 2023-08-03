@@ -206,14 +206,19 @@ def _haxe_test_impl(ctx):
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    test_file = ctx.actions.declare_file("MainTest.hx")
-    toolchain.create_test_class(
-        ctx,
-        ctx.files.srcs,
-        test_file,
-    )
+    runfiles = []
+    if ctx.attr.main_class == None:
+        test_file = ctx.actions.declare_file("MainTest.hx")
+        toolchain.create_test_class(
+            ctx,
+            ctx.files.srcs,
+            test_file,
+        )
+        runfiles.append(test_file)
 
     hxml = create_hxml_map(ctx, toolchain, for_test = True)
+    if ctx.attr.main_class != None:
+        hxml["main_class"] = ctx.attr.main_class
 
     build_file = ctx.actions.declare_file("{}-build-test.hxml".format(ctx.attr.name))
     create_build_hxml(ctx, toolchain, hxml, build_file)
@@ -221,7 +226,7 @@ def _haxe_test_impl(ctx):
     dir = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
-    runfiles = [test_file] + find_direct_sources(ctx) + find_direct_resources(ctx)
+    runfiles += find_direct_sources(ctx) + find_direct_resources(ctx)
 
     toolchain.compile(
         ctx,
@@ -297,6 +302,9 @@ haxe_test = rule(
         ),
         "extra_args": attr.string_list(
             doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",
+        ),
+        "main_class": attr.string(
+            doc = "Fully qualified class name of the main test class to build.  If not specified, test classes will be found automatically.",
         ),
     },
 )
