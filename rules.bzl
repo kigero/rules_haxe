@@ -207,7 +207,8 @@ def _haxe_test_impl(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     runfiles = []
-    if ctx.attr.main_class == None:
+
+    if ctx.attr.main_class == "":
         test_file = ctx.actions.declare_file("MainTest.hx")
         toolchain.create_test_class(
             ctx,
@@ -217,7 +218,7 @@ def _haxe_test_impl(ctx):
         runfiles.append(test_file)
 
     hxml = create_hxml_map(ctx, toolchain, for_test = True)
-    if ctx.attr.main_class != None:
+    if ctx.attr.main_class != "":
         hxml["main_class"] = ctx.attr.main_class
 
     build_file = ctx.actions.declare_file("{}-build-test.hxml".format(ctx.attr.name))

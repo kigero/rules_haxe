@@ -348,7 +348,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
             else:
                 output_file += "{}".format(hxml["name"])
 
-            if hxml["debug"] != None:
+            if hxml["debug"] == True:
                 output_file += "-debug"
 
             found_output_file = False
@@ -377,7 +377,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
             else:
                 output += "/{}".format(hxml["name"])
 
-            if hxml["debug"] != None:
+            if hxml["debug"] == True:
                 output += "-Debug"
 
             hxml["output_file"] = output + ".jar"
@@ -388,7 +388,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         content += "--{} {}{}\n".format(hxml["target"], hxml["build_file"], ext)
 
     # Debug
-    if hxml["debug"] != None:
+    if hxml["debug"] == True:
         content += "--debug\n"
 
     # Classpaths
