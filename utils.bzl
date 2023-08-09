@@ -54,6 +54,48 @@ def find_direct_sources(ctx):
 
     return rtrn
 
+def _combine_external_deps(external_deps, out):
+    if external_deps == None:
+        return
+
+    for dep in external_deps.keys():
+        dep_target = external_deps[dep]
+
+        if dep in out:
+            if dep_target not in out[dep]:
+                out[dep] += "," + dep_target
+        else:
+            out[dep] = dep_target
+
+def find_direct_external_deps(ctx):
+    """
+    Finds the direct external dependencies of the given context.
+
+    Args:
+        ctx: The bazel context.
+        target: The target platform, or * for all.
+
+    Returns:
+        An map of external dependencies.
+    """
+    rtrn = {}
+
+    if hasattr(ctx.attr, "external_deps"):
+        _combine_external_deps(ctx.attr.external_deps, rtrn)
+
+    if hasattr(ctx.attr, "deps"):
+        for dep in ctx.attr.deps:
+            haxe_dep = dep[HaxeProjectInfo]
+            if haxe_dep == None:
+                continue
+            if hasattr(haxe_dep, "external_deps"):
+                _combine_external_deps(haxe_dep.external_deps, rtrn)
+            for deep_dep in haxe_dep.deps.to_list():
+                if hasattr(deep_dep, "external_deps"):
+                    _combine_external_deps(deep_dep.external_deps, rtrn)
+
+    return rtrn
+
 def find_direct_docsources(ctx):
     """
     Finds the direct document sources of the given context.

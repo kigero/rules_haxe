@@ -1,7 +1,7 @@
 """Haxe build rules."""
 
 load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
-load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "find_direct_docsources", "find_direct_resources", "find_direct_sources")
+load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "find_direct_docsources", "find_direct_external_deps", "find_direct_resources", "find_direct_sources")
 
 def _haxe_library_impl(ctx):
     """
@@ -206,7 +206,7 @@ def _haxe_test_impl(ctx):
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
-    runfiles = []
+    compile_runfiles = []
 
     if ctx.attr.main_class == "":
         test_file = ctx.actions.declare_file("MainTest.hx")
@@ -215,7 +215,7 @@ def _haxe_test_impl(ctx):
             ctx.files.srcs,
             test_file,
         )
-        runfiles.append(test_file)
+        compile_runfiles.append(test_file)
 
     hxml = create_hxml_map(ctx, toolchain, for_test = True)
     if ctx.attr.main_class != "":
@@ -227,15 +227,19 @@ def _haxe_test_impl(ctx):
     dir = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
-    runfiles += find_direct_sources(ctx) + find_direct_resources(ctx)
+    compile_runfiles += find_direct_sources(ctx) + find_direct_resources(ctx)
 
     toolchain.compile(
         ctx,
         hxml = build_file,
-        runfiles = runfiles,
+        runfiles = compile_runfiles,
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
         out = dir,
     )
+
+    # Copy any external dependencies to the target directory.
+    external_deps = find_direct_external_deps(ctx)
+    external_deps_file = toolchain.copy_external_deps(ctx, external_deps, hxml["target"], dir)
 
     launcher_file = ctx.actions.declare_file("{}-launcher.bat".format(ctx.attr.name))
     toolchain.create_run_script(
@@ -245,9 +249,13 @@ def _haxe_test_impl(ctx):
         launcher_file,
     )
 
+    rtrn_runfiles = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [dir, launcher_file]
+    if external_deps_file != None:
+        rtrn_runfiles.append(external_deps_file)
+
     return [
         DefaultInfo(
-            runfiles = ctx.runfiles(files = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [dir, launcher_file]),
+            runfiles = ctx.runfiles(files = rtrn_runfiles),
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
@@ -265,6 +273,7 @@ def _haxe_test_impl(ctx):
                 direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
             ),
+            external_deps = external_deps,
         ),
     ]
 
@@ -339,6 +348,7 @@ def _haxe_project_definition(ctx):
                 direct = [dep[HaxeProjectInfo] for dep in ctx.attr.deps],
                 transitive = [dep[HaxeProjectInfo].deps for dep in ctx.attr.deps],
             ),
+            external_deps = ctx.attr.external_deps if hasattr(ctx.attr, "external_deps") else None,
         ),
         HaxeLibraryInfo(
             hxml = hxml,
@@ -390,6 +400,13 @@ haxe_project_definition = rule(
         "deps": attr.label_list(
             providers = [HaxeLibraryInfo, HaxeProjectInfo],
             doc = "Direct dependencies of the library.",
+        ),
+        "external_deps": attr.label_keyed_string_dict(
+            doc = """
+                Dependencies outside of the Haxe source code and haxelibs that are required to be a part of the build, e.g. extern implementations for a specific target.
+                Keys are the labels of the dependency, while values are a target that the dependency should be included for ('*' for all targets).
+            """,
+            allow_files = True,
         ),
         "extra_args": attr.string_list(
             doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",

@@ -432,6 +432,48 @@ def haxe_postprocess_dox(ctx, out_dir):
         mnemonic = "ProcessDox",
     )
 
+def haxe_copy_external_deps(ctx, external_deps, target, out_dir):
+    """
+    Copy external deps to an output directory for a particular target.
+    
+    Args:
+        ctx: Bazel context.
+        external_deps: Haxe project external deps.
+        target: The haxe target to copy deps for.
+        out_dir: Where to copy files to.
+        
+    Returns: 
+        A file indicating the success of the copy.
+    """
+
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+
+    files = []
+
+    for dep in external_deps:
+        dep_target = external_deps[dep]
+        if target in dep_target:
+            for file in dep.files.to_list():
+                files.append(file)
+
+    if len(files) > 0:
+        copy_file = ctx.actions.declare_file(target + "_external_deps_copy")
+        cmd = "cp "
+        for file in files:
+            cmd += file.path + " "
+        cmd += out_dir.path + " > " + copy_file.path
+
+        ctx.actions.run_shell(
+            outputs = [copy_file],
+            inputs = files,
+            command = cmd,
+            use_default_shell_env = True,
+            mnemonic = "CopyExternalDeps",
+        )
+
+        return copy_file
+    return None
+
 def _haxe_toolchain_impl(ctx):
     """
     Haxe toolchain implementation.
@@ -525,6 +567,7 @@ def _haxe_toolchain_impl(ctx):
         postprocess_dox = haxe_postprocess_dox,
         haxelib_language_versions = haxelib_language_versions,
         haxe_cpp_toolchain = haxe_cpp_toolchain,
+        copy_external_deps = haxe_copy_external_deps,
 
         # Internal data. Contents may change without notice.
         internal = struct(
