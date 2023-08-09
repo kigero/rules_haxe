@@ -73,7 +73,6 @@ def find_direct_external_deps(ctx):
 
     Args:
         ctx: The bazel context.
-        target: The target platform, or * for all.
 
     Returns:
         An map of external dependencies.
@@ -93,6 +92,26 @@ def find_direct_external_deps(ctx):
             for deep_dep in haxe_dep.deps.to_list():
                 if hasattr(deep_dep, "external_deps"):
                     _combine_external_deps(deep_dep.external_deps, rtrn)
+
+    return rtrn
+
+def filter_external_deps(external_deps, target):
+    """
+    Finds the direct external dependencies of the given context.
+
+    Args:
+        external_deps: The external dependencies map.
+        target: The target platform, or * for all.
+
+    Returns:
+        A list of external dependency files.
+    """
+    rtrn = []
+    for dep in external_deps:
+        dep_target = external_deps[dep]
+        if target in dep_target or dep_target == "*":
+            for file in dep.files.to_list():
+                rtrn.append(file)
 
     return rtrn
 
@@ -331,7 +350,7 @@ def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
 
     return hxml
 
-def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = False):
+def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = False, external_dep_files = []):
     """
     Create the build.hxml file based on the input hxml dict.
 
@@ -345,6 +364,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         suffix: Optional suffix to append to the build parameters.
         for_exec: Whether this build HXML is intended for executing the result of the build; this can ignore some errors
             that aren't an issue during execution.
+        external_dep_files: files that should be copied as part of the build.
     """
 
     # Determine if we're in a dependant build.
@@ -463,6 +483,10 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
                     path = path[len(classpath) + 1:]
                     break
             content += path.replace(".hx", "").replace("/", ".") + "\n"
+
+    # External dependencies
+    for file in external_dep_files:
+        content += "--cmd cp " + file.path + " " + ctx.var["BINDIR"] + "/" + hxml["external_dir"] + package + hxml["output_dir"] + "/" + file.basename + "\n"
 
     count = 1
     build_files = list()

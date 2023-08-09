@@ -1,7 +1,7 @@
 """Haxe build rules."""
 
 load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
-load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "find_direct_docsources", "find_direct_external_deps", "find_direct_resources", "find_direct_sources")
+load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "filter_external_deps", "find_direct_docsources", "find_direct_external_deps", "find_direct_resources", "find_direct_sources")
 
 def _haxe_library_impl(ctx):
     """
@@ -15,11 +15,15 @@ def _haxe_library_impl(ctx):
     # Build the HXML file.
     hxml = create_hxml_map(ctx, toolchain)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
-    create_build_hxml(ctx, toolchain, hxml, build_file, "-intermediate")
+
+    external_deps = find_direct_external_deps(ctx)
+    external_dep_files = filter_external_deps(external_deps, hxml["target"])
+
+    create_build_hxml(ctx, toolchain, hxml, build_file, "-intermediate", external_dep_files = external_dep_files)
     intermediate = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
-    runfiles = []
+    runfiles = external_dep_files
     for i, d in enumerate(ctx.attr.srcs):
         for f in d.files.to_list():
             runfiles.append(f)
@@ -127,11 +131,15 @@ def _haxe_executable_impl(ctx):
     # Build the HXML file.
     hxml = create_hxml_map(ctx, toolchain)
     build_file = ctx.actions.declare_file("{}-build.hxml".format(ctx.attr.name))
-    create_build_hxml(ctx, toolchain, hxml, build_file, for_exec = True)
+
+    external_deps = find_direct_external_deps(ctx)
+    external_dep_files = filter_external_deps(external_deps, hxml["target"])
+
+    create_build_hxml(ctx, toolchain, hxml, build_file, for_exec = True, external_dep_files = external_dep_files)
     dir = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
-    runfiles = find_direct_sources(ctx) + find_direct_resources(ctx)
+    runfiles = find_direct_sources(ctx) + find_direct_resources(ctx) + external_dep_files
 
     toolchain.compile(
         ctx,
@@ -222,12 +230,16 @@ def _haxe_test_impl(ctx):
         hxml["main_class"] = ctx.attr.main_class
 
     build_file = ctx.actions.declare_file("{}-build-test.hxml".format(ctx.attr.name))
-    create_build_hxml(ctx, toolchain, hxml, build_file)
+
+    external_deps = find_direct_external_deps(ctx)
+    external_dep_files = filter_external_deps(external_deps, hxml["target"])
+
+    create_build_hxml(ctx, toolchain, hxml, build_file, external_dep_files = external_dep_files)
 
     dir = ctx.actions.declare_directory(hxml["output_dir"])
 
     # Do the compilation.
-    compile_runfiles += find_direct_sources(ctx) + find_direct_resources(ctx)
+    compile_runfiles += find_direct_sources(ctx) + find_direct_resources(ctx) + external_dep_files
 
     toolchain.compile(
         ctx,
@@ -236,10 +248,6 @@ def _haxe_test_impl(ctx):
         deps = [dep[HaxeLibraryInfo] for dep in ctx.attr.deps],
         out = dir,
     )
-
-    # Copy any external dependencies to the target directory.
-    external_deps = find_direct_external_deps(ctx)
-    external_deps_file = toolchain.copy_external_deps(ctx, external_deps, hxml["target"], dir)
 
     launcher_file = ctx.actions.declare_file("{}-launcher.bat".format(ctx.attr.name))
     toolchain.create_run_script(
@@ -250,8 +258,6 @@ def _haxe_test_impl(ctx):
     )
 
     rtrn_runfiles = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [dir, launcher_file]
-    if external_deps_file != None:
-        rtrn_runfiles.append(external_deps_file)
 
     return [
         DefaultInfo(
