@@ -17,6 +17,7 @@ class RulesHaxeUtils
 
 		var pkg = null;
 		var clsNames = new Array<String>();
+		var enums = new Array<String>();
 		var privateClasses = new Array<String>();
 		var inComment = false;
 		for (idx in 0...lines.length)
@@ -52,6 +53,7 @@ class RulesHaxeUtils
 				{
 					var tokens = line.split(" ");
 					var idx = tokens.indexOf("class");
+					var isEnum = false;
 					if (idx < 0)
 					{
 						idx = tokens.indexOf("interface");
@@ -59,6 +61,7 @@ class RulesHaxeUtils
 					if (idx < 0)
 					{
 						idx = tokens.indexOf("enum");
+						isEnum = true;
 					}
 
 					if (idx >= 0)
@@ -103,6 +106,10 @@ class RulesHaxeUtils
 						{
 							privateClasses.push(clsName);
 						}
+						else if (isEnum)
+						{
+							enums.push(clsName);
+						}
 						else
 						{
 							clsNames.push(clsName);
@@ -119,19 +126,19 @@ class RulesHaxeUtils
 
 		if (pkg != null)
 		{
-			var mainClassName = null;
+			var mainClassName = clsNames.length > 0 ? clsNames[0] : null;
 
 			for (idx in 0...clsNames.length)
 			{
-				if (idx == 0)
-				{
-					mainClassName = clsNames[0];
-				}
 				clsNames[idx] = '$pkg.${clsNames[idx]}';
 			}
 			for (idx in 0...privateClasses.length)
 			{
 				clsNames.push('$pkg._$mainClassName.${privateClasses[idx]}');
+			}
+			for (idx in 0...enums.length)
+			{
+				clsNames.push('$pkg.${enums[idx]}');
 			}
 		}
 
