@@ -7,7 +7,6 @@
 # $4: WIN or LIN
 # $5: file to capture output in
 # Rest of arguments are command to run
-set -e
 
 if [[ "." != "$1" ]]; then
     export PATH=`pwd`/$1:$PATH
@@ -34,4 +33,11 @@ shift
 OUTPUT=$1
 shift
 
-$@ > $OUTPUT
+$@ > $OUTPUT 2>&1
+
+if [ "$?" -ne "0" ]; then
+  echo "***** START BUILD LOG ****"
+  cat $OUTPUT
+  echo "***** END BUILD LOG ****"
+  exit 1
+fi
