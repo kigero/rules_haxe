@@ -744,6 +744,10 @@ haxe_std_lib = rule(
             default = "neko",
             doc = "Target platform.",
         ),
+        "debug": attr.bool(
+            default = True,
+            doc = "If True, will compile the library with debug flags on.",
+        ),
     },
 )
 
@@ -851,6 +855,10 @@ haxe_haxelib_lib = rule(
         ),
         "include": attr.string_list(
             doc = "Classpath prefixes to include - if not set, all will be included..",
+        ),
+        "debug": attr.bool(
+            default = True,
+            doc = "If True, will compile the library with debug flags on.",
         ),
     },
 )
