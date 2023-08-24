@@ -572,6 +572,11 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
     if out_dir != None:
         def_info_files.append(out_dir)
 
+    ext_deps = find_direct_external_deps(ctx)
+    for dep in ext_deps:
+        for f in dep.files.to_list():
+            def_info_files.append(f)
+
     rtrn = [
         DefaultInfo(
             files = depset(def_info_files),
