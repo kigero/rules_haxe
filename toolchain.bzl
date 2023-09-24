@@ -183,6 +183,7 @@ def haxe_haxelib_install(ctx, haxelib, version, runfiles = [], deps = []):
         path_runfiles.append(install_out)
 
     out = ctx.actions.declare_file("haxelib_path_{}".format(path_suffix))
+
     haxe_haxelib_path(ctx, haxelib, version, out, path_runfiles, deps)
     return out
 
@@ -425,10 +426,12 @@ def haxe_create_run_script(ctx, target, lib_name, out):
 
 def haxe_postprocess_dox(ctx, out_dir):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
-    ctx.actions.run_shell(
-        inputs = [toolchain.internal.postprocess_dox_tool, ctx.file.dox_file],
+
+    ctx.actions.run(
+        executable = toolchain.internal.postprocess_dox_tool[DefaultInfo].files_to_run,
+        inputs = [ctx.file.dox_file],
         outputs = [out_dir],
-        command = "{} {} {} {}".format(toolchain.internal.postprocess_dox_tool.path, ctx.file.dox_file.path, out_dir.path, ctx.attr.root_pkg),
+        arguments = [ctx.file.dox_file.path, out_dir.path, ctx.attr.root_pkg],
         mnemonic = "ProcessDox",
     )
 
@@ -451,7 +454,6 @@ def _haxe_toolchain_impl(ctx):
     copy_hxcpp_includes_script = None
     haxe_dir = None
     neko_dir = None
-    postprocess_dox_tool = None
 
     for f in ctx.files.tools:
         if f.path.endswith("/haxe") or f.path.endswith("/haxe.exe"):
@@ -470,8 +472,6 @@ def _haxe_toolchain_impl(ctx):
             postprocess_hxcpp_script = f
         if f.path.endswith("/copy_hxcpp_includes.sh"):
             copy_hxcpp_includes_script = f
-        if f.path.endswith("/postprocess_dox") or f.path.endswith("/postprocess_dox.exe"):
-            postprocess_dox_tool = f
 
     if haxe_cmd:
         haxe_dir = haxe_cmd.dirname
@@ -495,8 +495,8 @@ def _haxe_toolchain_impl(ctx):
         fail("could not locate postprocess_hxcpp.sh file")
     if not copy_hxcpp_includes_script:
         fail("could not locate copy_hxcpp_includes.sh file")
-    if not postprocess_dox_tool:
-        fail("could not locate postprocess_dox_tool")
+
+    postprocess_dox_tool = ctx.attr.postprocess_dox
 
     env = {
         "HAXELIB_PATH": haxelib_file.dirname,
@@ -548,6 +548,10 @@ haxe_toolchain = rule(
         "tools": attr.label_list(
             mandatory = True,
             doc = "Tools needed from the Haxe/Neko installation.",
+        ),
+        "postprocess_dox": attr.label(
+            mandatory = True,
+            doc = "Dox postprocessor tool.",
         ),
         "cpp_toolchain": attr.label(
             mandatory = True,

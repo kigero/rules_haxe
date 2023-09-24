@@ -15,7 +15,8 @@ py_binary(
 # Instantiate the toolchain.
 haxe_toolchain(
     name = "toolchain_impl",
-    tools = [":tools", ":postprocess_dox"],
+    postprocess_dox = ":postprocess_dox",
+    tools = [":tools"],
     cpp_toolchain = "@local_config_cc//:toolchain",
 )
 
