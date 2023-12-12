@@ -54,6 +54,7 @@ class RulesHaxeUtils
 					var tokens = line.split(" ");
 					var idx = tokens.indexOf("class");
 					var isEnum = false;
+					var isAbstract = false;
 					if (idx < 0)
 					{
 						idx = tokens.indexOf("interface");
@@ -62,6 +63,11 @@ class RulesHaxeUtils
 					{
 						idx = tokens.indexOf("enum");
 						isEnum = true;
+					}
+					if (idx < 0)
+					{
+						idx = tokens.indexOf("abstract");
+						isAbstract = true;
 					}
 
 					if (idx >= 0)
@@ -82,11 +88,6 @@ class RulesHaxeUtils
 						if (clsName.indexOf("<") >= 0)
 						{
 							clsName = clsName.substring(0, clsName.indexOf("<"));
-						}
-
-						if (clsName.toLowerCase() == "abstract")
-						{
-							continue;
 						}
 
 						var isPrivate = false;
@@ -110,9 +111,18 @@ class RulesHaxeUtils
 						{
 							enums.push(clsName);
 						}
+						else if (isAbstract)
+						{
+							clsNames.push("_" + clsName + "." + clsName + "_Impl_");
+						}
 						else
 						{
 							clsNames.push(clsName);
+						}
+
+						if (isAbstract)
+						{
+							clsNames.push("_" + clsName + "." + clsName + "_Impl_");
 						}
 					}
 				}
