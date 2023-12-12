@@ -10,7 +10,7 @@ using StringTools;
 
 class RulesHaxeUtils
 {
-	static function findFQCN(path:String):Array<String>
+	static function findFQCN(path:String, allowAbstract:Bool = false):Array<String>
 	{
 		var content = File.getContent(path);
 		var lines = content.split("\n");
@@ -90,6 +90,11 @@ class RulesHaxeUtils
 							clsName = clsName.substring(0, clsName.indexOf("<"));
 						}
 
+						if (!allowAbstract && (isAbstract || clsName == "abstract" || clsName.indexOf("(") > 0))
+						{
+							continue;
+						}
+
 						var isPrivate = false;
 						if (idx > 0)
 						{
@@ -118,11 +123,6 @@ class RulesHaxeUtils
 						else
 						{
 							clsNames.push(clsName);
-						}
-
-						if (isAbstract)
-						{
-							clsNames.push("_" + clsName + "." + clsName + "_Impl_");
 						}
 					}
 				}
@@ -204,7 +204,7 @@ class RulesHaxeUtils
 
 		for (src in srcs)
 		{
-			var fqcns = findFQCN(src);
+			var fqcns = findFQCN(src, true);
 			for (fqcn in fqcns)
 			{
 				fqcn = fqcn.replace(".", "/");
@@ -419,7 +419,7 @@ class RulesHaxeUtils
 		{
 			for (cls in findFQCN(haxeInstallDir + "/" + file))
 			{
-				if (!classes.contains(cls) && !EXCLUDED_CLASSES.contains(cls) && !cls.startsWith(";") && !cls.contains("_"))
+				if (!classes.contains(cls) && !EXCLUDED_CLASSES.contains(cls) && !cls.startsWith(";") && !cls.contains("_") && !cls.contains("("))
 				{
 					classes.push(cls);
 				}
