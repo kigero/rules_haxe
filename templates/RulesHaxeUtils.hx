@@ -62,12 +62,23 @@ class RulesHaxeUtils
 					if (idx < 0)
 					{
 						idx = tokens.indexOf("enum");
-						isEnum = true;
+						if (idx >= 0)
+						{
+							isEnum = true;
+						}
 					}
 					if (idx < 0)
 					{
 						idx = tokens.indexOf("abstract");
-						isAbstract = true;
+						if (idx >= 0)
+						{
+							isAbstract = true;
+						}
+					}
+
+					if (!allowAbstract && isAbstract)
+					{
+						continue;
 					}
 
 					if (idx >= 0)
@@ -90,11 +101,6 @@ class RulesHaxeUtils
 							clsName = clsName.substring(0, clsName.indexOf("<"));
 						}
 
-						if (!allowAbstract && (isAbstract || clsName == "abstract" || clsName.indexOf("(") > 0))
-						{
-							continue;
-						}
-
 						var isPrivate = false;
 						if (idx > 0)
 						{
@@ -106,6 +112,11 @@ class RulesHaxeUtils
 									break;
 								}
 							}
+						}
+
+						if (clsName == "abstract")
+						{
+							continue;
 						}
 
 						if (isPrivate)
