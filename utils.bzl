@@ -486,7 +486,10 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
 
     # External dependencies
     for file in external_dep_files:
-        content += "--cmd cp " + file.path + " " + ctx.var["BINDIR"] + "/" + hxml["external_dir"] + package + hxml["output_dir"] + "/" + file.basename + "\n"
+        if hxml["target"] == "java" and file.basename.endswith(".jar"):
+            content += "--java-lib " + file.path + "\n"  # + " " + ctx.var["BINDIR"] + "/" + hxml["external_dir"] + package + hxml["output_dir"] + "/" + file.basename + "\n"
+        else:
+            content += "--cmd cp " + file.path + " " + ctx.var["BINDIR"] + "/" + hxml["external_dir"] + package + hxml["output_dir"] + "/" + file.basename + "\n"
 
     count = 1
     build_files = list()
