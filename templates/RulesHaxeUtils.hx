@@ -1,10 +1,9 @@
-import sys.io.Process;
-import haxe.display.Display.DisplayItem;
-import haxe.io.Path;
-import sys.io.File;
-import sys.FileSystem;
-import haxe.zip.Entry;
 import haxe.crypto.Crc32;
+import haxe.io.Path;
+import haxe.zip.Entry;
+import sys.FileSystem;
+import sys.io.File;
+import sys.io.Process;
 
 using StringTools;
 

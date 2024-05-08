@@ -345,6 +345,11 @@ def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
                 if not arg in hxml["args"]:
                     hxml["args"].append(arg)
 
+    if hasattr(ctx.attr, "suppress_extra_args"):
+        for arg in ctx.attr.suppress_extra_args:
+            if arg in hxml["args"]:
+                hxml["args"].remove(arg)
+
     is_external = ctx.label.workspace_root.startswith("external")
     hxml["external_dir"] = "/".join(ctx.label.workspace_root.split("/")[:2]) + "/" if is_external else ""
 

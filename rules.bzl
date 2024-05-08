@@ -319,6 +319,9 @@ haxe_test = rule(
         "extra_args": attr.string_list(
             doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",
         ),
+        "suppress_extra_args": attr.string_list(
+            doc = "Allows the suppression of lines that were added through extra_args.  This can be helpful to undo macros needed for included libraries (e.g. includes)).  Must match exactly.",
+        ),
         "main_class": attr.string(
             doc = "Fully qualified class name of the main test class to build.  If not specified, test classes will be found automatically.",
         ),
