@@ -10,6 +10,7 @@
 
 if [[ "." != "$1" ]]; then
     export PATH=`pwd`/$1:$PATH
+    export LD_LIBRARY_PATH=`pwd`/$1:$LD_LIBRARY_PATH
 fi
 shift
 
