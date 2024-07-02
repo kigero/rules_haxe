@@ -437,11 +437,9 @@ def _resolve_path(local_refs, workspace_path, path):
             return "{}/{}".format(workspace_path, path)
     elif "bin/external" in path:
         # Hacky workaround to find the path of the resource in the bin directory.
-        idx = path.find("bin/external")
-        slash_idx = workspace_path.rfind("/")
-        if slash_idx == -1:
-            slash_idx = workspace_path.rfind("\\")
-        return workspace_path[:slash_idx] + "/" + path[idx:]
+        if workspace_path.endswith("/") or workspace_path.endswith("\\"):
+            workspace_path = workspace_path[:-1]
+        return workspace_path + "/" + path
 
     return path
 
