@@ -3,13 +3,7 @@
 load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
 load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "filter_external_deps", "find_direct_docsources", "find_direct_external_deps", "find_direct_resources", "find_direct_sources")
 
-def _haxe_library_impl(ctx):
-    """
-    Creates a haxe library using the given parameters.
-    
-    Args:
-        ctx: Bazel context.
-    """
+def _compile_library(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     # Build the HXML file.
@@ -40,15 +34,18 @@ def _haxe_library_impl(ctx):
     )
 
     # Post process the output file.
-    output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
     output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
+    output_path = output_file.dirname
+    slash_idx = output_path.rfind("/")
+    if slash_idx > 0:
+        output_path = output_path[:slash_idx]
 
     if hxml["target"] == "java":
         toolchain.create_final_jar(
             ctx,
             find_direct_sources(ctx),
             intermediate,
-            output,
+            output_path,
             hxml["output_file"],
             ctx.attr.strip_haxe,
             output_file = output_file,
@@ -61,17 +58,26 @@ def _haxe_library_impl(ctx):
             toolchain.copy_cpp_includes(ctx, hxcpp_include_dir)
             inputs.append(hxcpp_include_dir)
 
-        cmd = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path)
+        cmd = "mkdir -p {} && cp -r {}/* {}".format(output_path, intermediate.path, output_path)
         if hxcpp_include_dir != None:
-            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output.path, hxml["name"])
+            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output_path, hxml["name"])
 
         ctx.actions.run_shell(
-            outputs = [output, output_file],
+            outputs = [output_file],
             inputs = inputs,
             command = cmd,
             use_default_shell_env = True,
         )
-    return calc_provider_response(ctx, toolchain, hxml, output, output_file = output_file)
+    return calc_provider_response(ctx, toolchain, hxml, output_path, output_file = output_file)
+
+def _haxe_library_impl(ctx):
+    """
+    Creates a haxe library using the given parameters.
+    
+    Args:
+        ctx: Bazel context.
+    """
+    return _compile_library(ctx)
 
 haxe_library = rule(
     doc = "Create a library.",
@@ -703,15 +709,18 @@ def _haxe_std_lib(ctx):
     )
 
     # Post process the output file.
-    output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
     output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
+    output_path = output_file.dirname
+    slash_idx = output_path.rfind("/")
+    if slash_idx > 0:
+        output_path = output_path[:slash_idx]
 
     if hxml["target"] == "java":
         toolchain.create_final_jar(
             ctx,
             find_direct_sources(ctx),
             intermediate,
-            output,
+            output_path,
             hxml["output_file"],
             False,
             output_file = output_file,
@@ -724,17 +733,17 @@ def _haxe_std_lib(ctx):
             toolchain.copy_cpp_includes(ctx, hxcpp_include_dir)
             inputs.append(hxcpp_include_dir)
 
-        cmd = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path)
+        cmd = "mkdir -p {} && cp -r {}/* {}".format(output_path, intermediate.path, output_path)
         if hxcpp_include_dir != None:
-            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output.path, hxml["name"])
+            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output_path, hxml["name"])
 
         ctx.actions.run_shell(
-            outputs = [output, output_file],
+            outputs = [output_file],
             inputs = inputs,
             command = cmd,
             use_default_shell_env = True,
         )
-    return calc_provider_response(ctx, toolchain, hxml, output, output_file = output_file, library_name = "StdBuild")
+    return calc_provider_response(ctx, toolchain, hxml, output_path, output_file = output_file, library_name = "StdBuild")
 
 haxe_std_lib = rule(
     doc = "Generate the haxe standard library such that it can be used as a dependency.",

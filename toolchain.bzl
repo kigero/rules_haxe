@@ -284,7 +284,7 @@ def haxe_create_haxelib_build(ctx, haxelib, version, target, out, includes = Non
         use_default_shell_env = True,
     )
 
-def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = True, include_sources = True, output_file = None, for_haxelib = False, no_strip = []):
+def haxe_create_final_jar(ctx, srcs, intermediate, output_path, jar_name, strip = True, include_sources = True, output_file = None, for_haxelib = False, no_strip = []):
     """
     Create the final jar file, which strips out haxe classes and adds source files.
     
@@ -292,7 +292,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
         ctx: Bazel context.
         srcs: The sources to search for unit test files.
         intermediate: The intermediate jar file's directory.
-        output: The final jar file's directory.
+        output_path: The final jar file's directory.
         jar_name: The name of the jar in the intermediate/output directories.
         strip: Strip out haxe classes.
         include_sources: Include the Java sources in the jar.
@@ -307,7 +307,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
     else:
         command = "haxe"
     command += " -p " + toolchain.internal.utils_file.dirname
-    command += " --run RulesHaxeUtils.hx createFinalJar {}/{} {}/{} {} {} {}".format(intermediate.path, jar_name, output.path, jar_name, "true" if strip else "false", "true" if include_sources else "false", "true" if for_haxelib else "false")
+    command += " --run RulesHaxeUtils.hx createFinalJar {}/{} {}/{} {} {} {}".format(intermediate.path, jar_name, output_path, jar_name, "true" if strip else "false", "true" if include_sources else "false", "true" if for_haxelib else "false")
     if len(no_strip) == 0:
         command += " _"
     else:
@@ -317,7 +317,7 @@ def haxe_create_final_jar(ctx, srcs, intermediate, output, jar_name, strip = Tru
         command += " " + file.path
 
     ctx.actions.run_shell(
-        outputs = [output, output_file],
+        outputs = [output_file],
         inputs = [intermediate],
         command = command,
         use_default_shell_env = True,

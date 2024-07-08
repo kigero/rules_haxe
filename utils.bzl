@@ -534,7 +534,7 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
         command = "mv {} {}".format(build_file_1.path, out_file.path),
     )
 
-def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file = None, output_file = None, library_name = None):
+def calc_provider_response(ctx, toolchain, hxml, output_path = None, launcher_file = None, output_file = None, library_name = None):
     """
     Determine an appropriate provider response based on the input context and the compilation target.
 
@@ -542,7 +542,7 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         ctx: The bazel context.
         toolchain: The Haxe toolchain.
         hxml: The HXML dictionary.
-        out_dir: The output directory.
+        output_path: The output directory.
         launcher_file: The launcher file to run, if there is one.
         output_file: The output file, if there is one.
         library_name: The name of the library, overrides the ctx variables.
@@ -551,8 +551,8 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         An array of providers.
     """
     runfiles = []
-    if out_dir != None:
-        runfiles.append(out_dir)
+    # if out_dir != None:
+    #     runfiles.append(out_dir)
 
     if launcher_file != None:
         runfiles.append(launcher_file)
@@ -577,8 +577,8 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         resources = ctx.files.resources
 
     def_info_files = find_direct_sources(ctx)
-    if out_dir != None:
-        def_info_files.append(out_dir)
+    # if out_dir != None:
+    #     def_info_files.append(out_dir)
 
     ext_deps = find_direct_external_deps(ctx)
     for dep in ext_deps:
@@ -592,7 +592,7 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
-            lib = out_dir,
+            # lib = out_dir,
             hxml = hxml,
             deps = depset(
                 direct = haxe_deps_lib_direct,
@@ -618,8 +618,8 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         java_out = ctx.actions.declare_file("java-deps/{}/{}".format(hxml["output_dir"], hxml["output_file"]))
         ctx.actions.run_shell(
             outputs = [java_out],
-            inputs = [out_dir],
-            command = "cp {}/{} {}".format(out_dir.path, hxml["output_file"], java_out.path),
+            inputs = [output_file],
+            command = "cp {}/{} {}".format(output_path, hxml["output_file"], java_out.path),
             use_default_shell_env = True,
             mnemonic = "CopyJavaTargetToOutput",
         )
@@ -636,7 +636,7 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         ))
     elif hxml["target"] == "python":
         rtrn.append(PyInfo(
-            transitive_sources = depset([out_dir]),
+            transitive_sources = depset([output_path]),
         ))
     elif hxml["target"] == "cpp":
         # To get includes to be added to a downstream cc_library, they need to be added to the output.  But since we
@@ -646,8 +646,8 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         inc = ctx.actions.declare_directory("{}_includes_dir.h".format(ctx.label.name))
         ctx.actions.run_shell(
             outputs = [inc],
-            inputs = [out_dir],
-            command = "cp -r -t {} {}/{}/include/* {}/{}/HxcppConfig-19.h".format(inc.path, out_dir.path, ctx.label.name, out_dir.path, ctx.label.name),
+            inputs = [],
+            command = "cp -r -t {} {}/{}/include/* {}/{}/HxcppConfig-19.h".format(inc.path, output_path, ctx.label.name, output_path, ctx.label.name),
         )
 
         # Create an appropriate library object depending on whether the library is static or dynamic.
@@ -655,11 +655,11 @@ def calc_provider_response(ctx, toolchain, hxml, out_dir = None, launcher_file =
         if output_file != None:
             if output_file.path.lower().endswith(".dll"):
                 # Create a copy of the .lib file associated with the .dll so we have a File reference to it.
-                lib_file = ctx.actions.declare_file("{}/{}/lib{}-debug.lib".format(out_dir.path, hxml["name"], hxml["name"]))
+                lib_file = ctx.actions.declare_file("{}/{}/lib{}-debug.lib".format(output_path, hxml["name"], hxml["name"]))
                 ctx.actions.run_shell(
                     outputs = [lib_file],
-                    inputs = [out_dir],
-                    command = "cp {}/{}/obj/lib/lib{}-debug.lib {}".format(out_dir.path, hxml["name"], hxml["name"], lib_file.path),
+                    inputs = [],
+                    command = "cp {}/{}/obj/lib/lib{}-debug.lib {}".format(output_path, hxml["name"], hxml["name"], lib_file.path),
                 )
 
                 library_to_link = cc_common.create_library_to_link(
