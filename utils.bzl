@@ -551,8 +551,8 @@ def calc_provider_response(ctx, toolchain, hxml, output_path = None, launcher_fi
         An array of providers.
     """
     runfiles = []
-    # if out_dir != None:
-    #     runfiles.append(out_dir)
+    if output_file != None:
+        runfiles.append(output_file)
 
     if launcher_file != None:
         runfiles.append(launcher_file)
@@ -577,8 +577,8 @@ def calc_provider_response(ctx, toolchain, hxml, output_path = None, launcher_fi
         resources = ctx.files.resources
 
     def_info_files = find_direct_sources(ctx)
-    # if out_dir != None:
-    #     def_info_files.append(out_dir)
+    if output_file != None:
+        def_info_files.append(output_file)
 
     ext_deps = find_direct_external_deps(ctx)
     for dep in ext_deps:
@@ -592,7 +592,7 @@ def calc_provider_response(ctx, toolchain, hxml, output_path = None, launcher_fi
             executable = launcher_file,
         ),
         HaxeLibraryInfo(
-            # lib = out_dir,
+            # lib = output_path,
             hxml = hxml,
             deps = depset(
                 direct = haxe_deps_lib_direct,
@@ -636,7 +636,7 @@ def calc_provider_response(ctx, toolchain, hxml, output_path = None, launcher_fi
         ))
     elif hxml["target"] == "python":
         rtrn.append(PyInfo(
-            transitive_sources = depset([output_path]),
+            transitive_sources = depset([output_file]),
         ))
     elif hxml["target"] == "cpp":
         # To get includes to be added to a downstream cc_library, they need to be added to the output.  But since we

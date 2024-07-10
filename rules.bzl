@@ -18,7 +18,7 @@ def _compile_library(ctx):
 
     # Do the compilation.
     runfiles = external_dep_files
-    for i, d in enumerate(ctx.attr.srcs):
+    for d in ctx.attr.srcs:
         for f in d.files.to_list():
             runfiles.append(f)
 
@@ -36,11 +36,12 @@ def _compile_library(ctx):
     # Post process the output file.
     output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
     output_path = output_file.dirname
-    slash_idx = output_path.rfind("/")
-    if slash_idx > 0:
-        output_path = output_path[:slash_idx]
 
     if hxml["target"] == "java":
+        slash_idx = output_path.rfind("/")
+        if slash_idx > 0:
+            output_path = output_path[:slash_idx]
+
         toolchain.create_final_jar(
             ctx,
             find_direct_sources(ctx),
@@ -810,15 +811,22 @@ def _haxe_haxelib_lib(ctx):
     )
 
     # Post process the output file.
-    output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
+    # output = ctx.actions.declare_file(hxml["output_dir"].replace("-intermediate", ""))
+    # output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
+
     output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
+    output_path = output_file.dirname
 
     if hxml["target"] == "java":
+        slash_idx = output_path.rfind("/")
+        if slash_idx > 0:
+            output_path = output_path[:slash_idx]
+
         toolchain.create_final_jar(
             ctx,
             find_direct_sources(ctx),
             intermediate,
-            output,
+            output_path,
             hxml["output_file"],
             True,
             True,
@@ -834,17 +842,17 @@ def _haxe_haxelib_lib(ctx):
             toolchain.copy_cpp_includes(ctx, hxcpp_include_dir)
             inputs.append(hxcpp_include_dir)
 
-        cmd = "mkdir -p {} && cp -r {}/* {}".format(output.path, intermediate.path, output.path)
+        cmd = "mkdir -p {} && cp -r {}/* {}".format(output_path, intermediate.path, output_path)
         if hxcpp_include_dir != None:
-            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output.path, hxml["name"])
+            cmd += " && cp -r {}/* {}/{}/include".format(hxcpp_include_dir.path, output_path, hxml["name"])
 
         ctx.actions.run_shell(
-            outputs = [output, output_file],
+            outputs = [output_file],
             inputs = inputs,
             command = cmd,
             use_default_shell_env = True,
         )
-    return calc_provider_response(ctx, toolchain, hxml, output, output_file = output_file, library_name = ctx.attr.haxelib)
+    return calc_provider_response(ctx, toolchain, hxml, output_path, output_file = output_file, library_name = ctx.attr.haxelib)
 
 haxe_haxelib_lib = rule(
     doc = "Generate a haxelib library such that it can be used as a dependency.",
