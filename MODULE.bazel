@@ -1,0 +1,35 @@
+"""
+"""
+
+module(name = "rules_haxe", version = "1.0.0")
+
+bazel_dep(name = "platforms", version = "0.0.10")
+bazel_dep(name = "rules_cc", version = "0.0.9")
+
+cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure")
+use_repo(cc_configure, "local_config_cc")
+
+register_toolchains("@local_config_cc//:all")
+
+# Unit test modules.
+bazel_dep(name = "test-module-a", version = "0.1", dev_dependency = True)
+bazel_dep(name = "test-module-b", version = "0.1", dev_dependency = True)
+bazel_dep(name = "test-module-dist", version = "0.1", dev_dependency = True)
+local_path_override(
+    module_name = "test-module-a",
+    path = "test/packages/module-a",
+)
+local_path_override(
+    module_name = "test-module-b",
+    path = "test/packages/module-b",
+)
+local_path_override(
+    module_name = "test-module-dist",
+    path = "test/packages/module-dist",
+)
+
+# Skylib, for unit testing.
+bazel_dep(name = "bazel_skylib", version = "1.7.1", dev_dependency = True)
+
+# Stardoc, for documentation generation.
+bazel_dep(name = "stardoc", version = "0.7.0", dev_dependency = True)

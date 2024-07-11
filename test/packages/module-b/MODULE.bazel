@@ -1,0 +1,27 @@
+"""
+"""
+module(name = "test-module-b", version = "1.0.0")
+bazel_dep(name = "rules_java", version = "7.7.0")
+
+bazel_dep(name = "rules_haxe", version = "0.1")
+local_path_override(
+    module_name = "rules_haxe",
+    path = "../../../",
+)
+
+bazel_dep(name = "test-module-a", version = "0.1")
+local_path_override(
+    module_name = "test-module-a",
+    path = "../module-a",
+)
+
+# haxe_install = use_extension("@rules_haxe//:def.bzl", "haxe_install_ext")
+# use_repo(haxe_install, "haxe_windows_amd64")
+
+# haxe_install.install_windows_amd64(
+#     name = "haxe_windows_amd64",
+# )
+
+# register_toolchains(
+#     "@haxe_windows_amd64//:toolchain",
+# )
