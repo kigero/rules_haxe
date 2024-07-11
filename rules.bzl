@@ -34,10 +34,11 @@ def _compile_library(ctx):
     )
 
     # Post process the output file.
-    output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
-    output_path = output_file.dirname
 
     if hxml["target"] == "java":
+        output_file = ctx.actions.declare_file("{}/{}".format(ctx.attr.name, hxml["output_file"])) if "output_file" in hxml else None
+        output_path = output_file.dirname
+
         slash_idx = output_path.rfind("/")
         if slash_idx > 0:
             output_path = output_path[:slash_idx]
@@ -52,6 +53,9 @@ def _compile_library(ctx):
             output_file = output_file,
         )
     else:
+        output_file = ctx.actions.declare_directory("{}".format(ctx.attr.name))
+        output_path = output_file.path
+
         inputs = [intermediate]
         hxcpp_include_dir = None
         if hxml["target"] == "cpp":

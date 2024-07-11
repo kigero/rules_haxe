@@ -636,7 +636,7 @@ def calc_provider_response(ctx, toolchain, hxml, output_path = None, launcher_fi
         ))
     elif hxml["target"] == "python":
         rtrn.append(PyInfo(
-            transitive_sources = depset([output_file]),
+            transitive_sources = depset(direct = [output_file]),
         ))
     elif hxml["target"] == "cpp":
         # To get includes to be added to a downstream cc_library, they need to be added to the output.  But since we
