@@ -77,7 +77,7 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
 
     # Create the haxelib directory...
     if os == "windows":
-        res = ctx.execute(
+        ctx.execute(
             ["cmd", "/c", "mkdir", "haxelib_dir"],
         )
     else:
@@ -87,7 +87,7 @@ def _setup(ctx, haxe_url, haxe_sha256, neko_url, neko_sha256, os, arch, build_tp
 
     # ...and a file that can be used to find it in the toolchain.
     if os == "windows":
-        res = ctx.execute(
+        ctx.execute(
             ["cmd", "/c", "copy", "NUL", "haxelib_dir\\haxelib_file"],
         )
     else:
@@ -152,7 +152,7 @@ haxe_download = repository_rule(
     },
 )
 
-def _haxe_download_version(ctx):
+def _haxe_download_universal_version(repository_ctx):
     data = {
         "windows": {
             "amd64": {
@@ -200,27 +200,37 @@ def _haxe_download_version(ctx):
         },
     }
 
-    os_data = data[ctx.attr._os]
+    os = repository_ctx.os.name
+    arch = repository_ctx.os.arch
+
+    if "windows" in os:
+        os_family = "windows"
+    elif "linux" in os:
+        os_family = "linux"
+    else:
+        fail("Unsupported os family '{}'; use the 'haxe_download' rule directly.".format(os), "_os")
+
+    os_data = data[os_family]
     if os_data == None:
-        fail("Unsupported os '{}'; use the 'haxe_download' rule directly.".format(ctx.attr._os), "_os")
+        fail("Unsupported os '{}'; use the 'haxe_download' rule directly.".format(os), "_os")
 
-    arch_data = os_data[ctx.attr._arch]
+    arch_data = os_data[arch]
     if arch_data == None:
-        fail("Unsupported arch '{}'; use the 'haxe_download' rule directly.".format(ctx.attr._arch), "_arch")
+        fail("Unsupported arch '{}'; use the 'haxe_download' rule directly.".format(arch), "_arch")
 
-    haxe_data = arch_data["haxe"][ctx.attr.haxe_version]
+    haxe_data = arch_data["haxe"][repository_ctx.attr.haxe_version]
     if haxe_data == None:
-        fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(ctx.attr.haxe_version), "haxe_version")
+        fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(repository_ctx.attr.haxe_version), "haxe_version")
 
-    neko_data = arch_data["neko"][ctx.attr.neko_version]
+    neko_data = arch_data["neko"][repository_ctx.attr.neko_version]
     if neko_data == None:
-        fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(ctx.attr.neko_version), "neko_version")
+        fail("Unsupported haxe version '{}'; use the 'haxe_download' rule directly.".format(repository_ctx.attr.neko_version), "neko_version")
 
-    _setup(ctx, haxe_data["url"], haxe_data["sha256"], neko_data["url"], neko_data["sha256"], ctx.attr._os, ctx.attr._arch, ctx.attr._build_tpl, ctx.attr._gen_utils_tpl, ctx.attr._run_script, ctx.attr._haxelib_install_script, ctx.attr._postprocess_hxcpp_script, ctx.attr._copy_hxcpp_includes_script, ctx.attr._postprocess_dox_script)
+    _setup(repository_ctx, haxe_data["url"], haxe_data["sha256"], neko_data["url"], neko_data["sha256"], os_family, arch, repository_ctx.attr._build_tpl, repository_ctx.attr._gen_utils_tpl, repository_ctx.attr._run_script, repository_ctx.attr._haxelib_install_script, repository_ctx.attr._postprocess_hxcpp_script, repository_ctx.attr._copy_hxcpp_includes_script, repository_ctx.attr._postprocess_dox_script)
 
-haxe_download_windows_amd64 = repository_rule(
-    doc = "Downloads Haxe and Neko for Windows and sets up the repository.  Not all versions are supported; use haxe_download directly for a specific unsupported version.",
-    implementation = _haxe_download_version,
+haxe_download_universal = repository_rule(
+    doc = "Downloads Haxe and Neko and sets up the repository for the current OS and architecture.  Not all versions are supported; use haxe_download directly for a specific unsupported version.",
+    implementation = _haxe_download_universal_version,
     attrs = {
         "haxe_version": attr.string(
             default = "4.3.1",
@@ -229,54 +239,6 @@ haxe_download_windows_amd64 = repository_rule(
         "neko_version": attr.string(
             default = "2.3.0",
             doc = "The neko version to get.",
-        ),
-        "_os": attr.string(
-            default = "windows",
-        ),
-        "_arch": attr.string(
-            default = "amd64",
-        ),
-        "_build_tpl": attr.label(
-            default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
-        ),
-        "_gen_utils_tpl": attr.label(
-            default = "@rules_haxe//:templates/RulesHaxeUtils.hx",
-        ),
-        "_run_script": attr.label(
-            default = "@rules_haxe//:templates/run_haxe.sh",
-        ),
-        "_haxelib_install_script": attr.label(
-            default = "@rules_haxe//:templates/haxelib_install.sh",
-        ),
-        "_postprocess_hxcpp_script": attr.label(
-            default = "@rules_haxe//:templates/postprocess_hxcpp.sh",
-        ),
-        "_copy_hxcpp_includes_script": attr.label(
-            default = "@rules_haxe//:templates/copy_hxcpp_includes.sh",
-        ),
-        "_postprocess_dox_script": attr.label(
-            default = "@rules_haxe//:utilities/postprocess_dox.py",
-        ),
-    },
-)
-
-haxe_download_linux_amd64 = repository_rule(
-    doc = "Downloads Haxe and Neko for Linux and sets up the repository.  Not all versions are supported; use haxe_download directly for a specific unsupported version.",
-    implementation = _haxe_download_version,
-    attrs = {
-        "haxe_version": attr.string(
-            default = "4.3.1",
-            doc = "The haxe version to get.",
-        ),
-        "neko_version": attr.string(
-            default = "2.3.0",
-            doc = "The neko version to get.",
-        ),
-        "_os": attr.string(
-            default = "linux",
-        ),
-        "_arch": attr.string(
-            default = "amd64",
         ),
         "_build_tpl": attr.label(
             default = "@rules_haxe//:templates/BUILD.dist.bazel.tpl",
