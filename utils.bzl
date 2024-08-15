@@ -458,11 +458,16 @@ def create_build_hxml(ctx, toolchain, hxml, out_file, suffix = "", for_exec = Fa
     if hxml["debug"] == True:
         content += "--debug\n"
 
+    is_external = ctx.label.workspace_root.startswith("external")
+
     # Classpaths
+    written = []
     for classpath in hxml["classpaths"]:
         if not classpath.startswith("external"):
             classpath = "{}{}".format(source_root, classpath)
-        content += "-p {}\n".format(classpath)
+        if not classpath in written and (not is_external or classpath != "src/main/haxe"):
+            content += "-p {}\n".format(classpath)
+            written.append(classpath)
 
     # Compiler Args
     for c_arg in hxml["c-args"]:

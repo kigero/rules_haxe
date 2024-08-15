@@ -125,6 +125,10 @@ haxe_library = rule(
         "extra_args": attr.string_list(
             doc = "Any extra HXML arguments to pass to the compiler.  Each entry in this array will be added on its own line.",
         ),
+        "is_test_lib": attr.bool(
+            default = False,
+            doc = "Denotes whether this library contains test sources; if True, will include test classpaths when called from a non-test action (e.g. gen-hxml).",
+        ),
     },
 )
 
