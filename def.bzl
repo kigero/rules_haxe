@@ -24,8 +24,6 @@ haxe_haxelib_lib = _haxe_haxelib_lib
 # Repository rules.
 haxe_download = _haxe_download
 haxe_download_universal = _haxe_download_universal
-haxe_download_windows_amd64 = _haxe_download_windows_amd64
-haxe_download_linux_amd64 = _haxe_download_linux_amd64
 haxe_no_install = _haxe_no_install
 
 # Toolchain/providers.
