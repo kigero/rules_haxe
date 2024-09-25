@@ -221,6 +221,8 @@ Setting this variable sets the `-source` and `-target` compiler options in the H
 propagates to dependencies as well, so if you usually compile for Java 11 but you have one pesky deployment target that
 uses Java 1.8, setting this should compile all the dependencies with Java 1.8.
 
+If not set, the default java toolchain will be used to get the source and target version.
+
 ## CPP
 
 On Windows (Linux has not been tested), getting the right MSVC environment can be... problematic. The HXCPP toolchain

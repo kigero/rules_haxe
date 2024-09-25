@@ -308,8 +308,11 @@ def create_hxml_map(ctx, toolchain, for_test = False, for_std_build = False):
 
     hxml["c-args"] = list()
     if hxml["target"] == "java":
+        java_toolchain = ctx.toolchains["@bazel_tools//tools/jdk:toolchain_type"]
+        source_level = java_toolchain.java.source_version
         if "haxe_java_target_version" in ctx.var:
-            hxml["c-args"] += ["-source", ctx.var["haxe_java_target_version"], "-target", ctx.var["haxe_java_target_version"]]
+            source_level = ctx.var["haxe_java_target_version"]
+        hxml["c-args"] += ["-source", source_level, "-target", source_level]
 
     # Handle Dependencies
     if hasattr(ctx.attr, "deps"):

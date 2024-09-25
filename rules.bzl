@@ -87,7 +87,7 @@ def _haxe_library_impl(ctx):
 haxe_library = rule(
     doc = "Create a library.",
     implementation = _haxe_library_impl,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     fragments = ["cpp"],
     attrs = {
         "library_name": attr.string(
@@ -179,7 +179,7 @@ haxe_executable = rule(
     doc = "Create a binary.",
     implementation = _haxe_executable_impl,
     executable = True,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "executable_name": attr.string(
             doc = "The name of the binary to create; if not provided the rule name will be used.",
@@ -302,7 +302,7 @@ haxe_test = rule(
     doc = "Compile with Haxe and run unit tests.",
     implementation = _haxe_test_impl,
     test = True,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "srcs": attr.label_list(
             mandatory = True,
@@ -386,7 +386,7 @@ def _haxe_project_definition(ctx):
 haxe_project_definition = rule(
     doc = "Define the baseline project definition, which can be used in other projects to not depend specifically on a particular target output.",
     implementation = _haxe_project_definition,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "library_name": attr.string(
             doc = "The name of the library to create; if not provided the rule name will be used.",
@@ -500,7 +500,7 @@ def _haxe_gen_hxml(ctx):
 haxe_gen_hxml = rule(
     doc = "Generate an HXML file for a particular configuration.  This is useful to configure the VSHaxe plugin of VSCode.",
     implementation = _haxe_gen_hxml,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "hxml_name": attr.string(
             doc = "The name of the hxml to create; if not provided the rule name will be used.",
@@ -583,7 +583,7 @@ def _haxe_dox(ctx):
 haxe_dox = rule(
     doc = "Generate the DOX XML configuration file for a project.",
     implementation = _haxe_dox,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "hxml_name": attr.string(
             doc = "The name of the hxml to create; if not provided the rule name will be used.",
@@ -633,7 +633,7 @@ def _haxe_gen_docs_from_dox(ctx):
 haxe_gen_docs_from_dox = rule(
     doc = "Generate java files from a Dox file; this is useful when using a multi-project/language documentation gneerator that doesn't directly support Haxe (e.g. doxygen).",
     implementation = _haxe_gen_docs_from_dox,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "dox_file": attr.label(
             allow_single_file = True,
@@ -757,7 +757,7 @@ def _haxe_std_lib(ctx):
 haxe_std_lib = rule(
     doc = "Generate the haxe standard library such that it can be used as a dependency.",
     implementation = _haxe_std_lib,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "target": attr.string(
             default = "neko",
@@ -779,7 +779,7 @@ def _haxe_haxelib_lib(ctx):
     Args:
         ctx: Bazel context.
     """
-    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"]
 
     build_source_file = ctx.actions.declare_file("HaxelibBuild.hx")
     toolchain.create_haxelib_build(
@@ -865,7 +865,7 @@ def _haxe_haxelib_lib(ctx):
 haxe_haxelib_lib = rule(
     doc = "Generate a haxelib library such that it can be used as a dependency.",
     implementation = _haxe_haxelib_lib,
-    toolchains = ["@rules_haxe//:toolchain_type"],
+    toolchains = ["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"],
     attrs = {
         "haxelib": attr.string(
             mandatory = True,
