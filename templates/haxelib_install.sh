@@ -32,7 +32,7 @@ LOCKDIR="`realpath $0`.lock.$6"
 trap "rmdir $LOCKDIR 2> /dev/null" EXIT
 i="1"
 # Wait at most 120 seconds.
-while [ $i -lt 120 ]
+while [ $i -lt 60 ]
 do
     if mkdir $LOCKDIR 2> /dev/null
     then
@@ -43,7 +43,7 @@ do
     i=$[$i+1]
 done
 
-if [ $i -gt 119 ]
+if [ $i -gt 59 ]
 then
     echo "Timed out waiting for lock - removing lock directory, try the command again or see above for more errors."
     exit 1
