@@ -779,7 +779,7 @@ def _haxe_haxelib_lib(ctx):
     Args:
         ctx: Bazel context.
     """
-    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type", "@bazel_tools//tools/jdk:toolchain_type"]
+    toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
     build_source_file = ctx.actions.declare_file("HaxelibBuild.hx")
     toolchain.create_haxelib_build(
