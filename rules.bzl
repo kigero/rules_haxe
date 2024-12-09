@@ -171,6 +171,7 @@ def _haxe_executable_impl(ctx):
         hxml["target"],
         hxml["output_file"],
         launcher_file,
+        java_add_opens = ctx.attr.add_opens,
     )
 
     return calc_provider_response(ctx, toolchain, hxml, dir, launcher_file)
@@ -214,6 +215,9 @@ haxe_executable = rule(
         ),
         "main_class": attr.string(
             doc = "Fully qualified class name of the main class to build; if not provided, it must be provided by a dependency.",
+        ),
+        "add_opens": attr.string_dict(
+            doc = "A dict of qualified modules ('java.base/java.util') to the names that should be opened ('ALL-UNNAMED').",
         ),
     },
 )
@@ -270,6 +274,7 @@ def _haxe_test_impl(ctx):
         hxml["target"],
         hxml["output_file"],
         launcher_file,
+        java_add_opens = ctx.attr.add_opens,
     )
 
     rtrn_runfiles = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [dir, launcher_file]
@@ -339,6 +344,9 @@ haxe_test = rule(
         ),
         "main_class": attr.string(
             doc = "Fully qualified class name of the main test class to build.  If not specified, test classes will be found automatically.",
+        ),
+        "add_opens": attr.string_dict(
+            doc = "A dict of qualified modules ('java.base/java.util') to the names that should be opened ('ALL-UNNAMED').",
         ),
     },
 )

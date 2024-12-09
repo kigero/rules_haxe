@@ -347,7 +347,7 @@ def haxe_copy_cpp_includes(ctx, to_dir):
         mnemonic = "CopyHxCppIncludes",
     )
 
-def haxe_create_run_script(ctx, target, lib_name, out):
+def haxe_create_run_script(ctx, target, lib_name, out, java_add_opens = None):
     """
     Create a run script usable by Bazel for running executables (e.g. unit tests).
     
@@ -356,6 +356,7 @@ def haxe_create_run_script(ctx, target, lib_name, out):
         target: The target platform.
         lib_name: The name of the executable.
         out: The path to the run script.  Regardless of the file name, a platform appropriate script will be generated.
+        java_add_opens: Any modules that need to be added to the `--add-opens` flag for Java.
     """
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
 
@@ -365,6 +366,11 @@ def haxe_create_run_script(ctx, target, lib_name, out):
         neko_path = "neko"
 
     package = ctx.label.package + "/" if ctx.label.package != "" else ""
+
+    java_add_opens_str = ""
+    if java_add_opens != None:
+        for key in java_add_opens:
+            java_add_opens_str += " --add-opens {}={}".format(key, java_add_opens[key])
 
     script_content = ""
     if ctx.var["TARGET_CPU"].upper().find("WINDOWS") >= 0:
@@ -379,7 +385,7 @@ def haxe_create_run_script(ctx, target, lib_name, out):
         if target == "neko":
             script_content += "{} {}{}/{}".format(neko_path, package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "java":
-            script_content += "java -jar {}{}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
+            script_content += "java{}".format(java_add_opens_str) + " -jar {}{}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "python":
             script_content += "python{} {}/{}".format(package, ctx.attr.name, lib_name).replace("/", "\\")
         elif target == "php":
@@ -404,7 +410,7 @@ def haxe_create_run_script(ctx, target, lib_name, out):
         if target == "neko":
             script_content += "{} {}{}/{}".format(neko_path, package, ctx.attr.name, lib_name)
         elif target == "java":
-            script_content += "java -jar {}{}/{}".format(package, ctx.attr.name, lib_name)
+            script_content += "java{}".format(java_add_opens_str) + " -jar {}{}/{}".format(package, ctx.attr.name, lib_name)
         elif target == "python":
             script_content += "python {}{}/{}".format(package, ctx.attr.name, lib_name)
         elif target == "php":
