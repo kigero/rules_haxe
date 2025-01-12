@@ -17,7 +17,7 @@ haxe_toolchain(
     name = "toolchain_impl",
     postprocess_dox = ":postprocess_dox",
     tools = [":tools"],
-    cpp_toolchain = "@local_config_cc//:toolchain",
+    cpp_toolchain = "@bazel_tools//tools/cpp:current_cc_toolchain",
 )
 
 # Define the target toolchain; this is registered by users of this repository..

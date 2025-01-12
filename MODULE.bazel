@@ -1,15 +1,10 @@
 """
 """
 
-module(name = "rules_haxe", version = "1.1.2")
+module(name = "rules_haxe", version = "1.2.0")
 
 bazel_dep(name = "platforms", version = "0.0.10")
-bazel_dep(name = "rules_cc", version = "0.0.9")
-
-cc_configure = use_extension("@rules_cc//cc:extensions.bzl", "cc_configure")
-use_repo(cc_configure, "local_config_cc")
-
-register_toolchains("@local_config_cc//:all")
+bazel_dep(name = "rules_cc", version = "0.1.0")
 
 # Haxe definitions and toolchains.
 haxe_install = use_extension("@rules_haxe//:def.bzl", "haxe_install_ext")
