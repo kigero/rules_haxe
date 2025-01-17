@@ -4,7 +4,7 @@
 module(name = "rules_haxe", version = "1.2.0")
 
 bazel_dep(name = "platforms", version = "0.0.10")
-bazel_dep(name = "rules_cc", version = "0.1.0")
+bazel_dep(name = "rules_cc", version = "0.0.15")
 
 # Haxe definitions and toolchains.
 haxe_install = use_extension("@rules_haxe//:def.bzl", "haxe_install_ext")
