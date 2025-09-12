@@ -2,6 +2,7 @@
 Haxe utility functions.
 """
 
+load("@rules_java//java/common:java_info.bzl", "JavaInfo")
 load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
 
 def determine_source_root(path):
@@ -161,6 +162,28 @@ def find_direct_resources(ctx):
                 rtrn += haxe_dep.resources
 
     return rtrn
+
+def gather_java_deps(deps):
+    """
+    Gather java files and dependencies.
+    
+    Args:
+        deps: The dependencies to check.
+    Returns:
+        An array of java files.
+    """
+    rtrn_set = {}
+    if deps != None:
+        for dep in deps:
+            java_info = dep[JavaInfo]
+            if java_info == None:
+                continue
+            for dep in java_info.runtime_output_jars:
+                rtrn_set[dep] = True
+            for dep in java_info.transitive_runtime_jars.to_list():
+                rtrn_set[dep] = True
+
+    return list(rtrn_set.keys())
 
 def find_library_name(ctx):
     """

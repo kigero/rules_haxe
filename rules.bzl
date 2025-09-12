@@ -1,7 +1,7 @@
 """Haxe build rules."""
 
 load(":providers.bzl", "HaxeLibraryInfo", "HaxeProjectInfo")
-load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "filter_external_deps", "find_direct_docsources", "find_direct_external_deps", "find_direct_resources", "find_direct_sources")
+load(":utils.bzl", "calc_provider_response", "create_build_hxml", "create_hxml_map", "filter_external_deps", "find_direct_docsources", "find_direct_external_deps", "find_direct_resources", "find_direct_sources", "gather_java_deps")
 
 def _compile_library(ctx):
     toolchain = ctx.toolchains["@rules_haxe//:toolchain_type"]
@@ -250,8 +250,14 @@ def _haxe_test_impl(ctx):
 
     build_file = ctx.actions.declare_file("{}-build-test.hxml".format(ctx.attr.name))
 
+    runtime_deps = []
+    if hasattr(ctx.attr, "runtime_deps"):
+        if ctx.attr.target == "java":
+            runtime_deps += gather_java_deps(ctx.attr.runtime_deps)
+
     external_deps = find_direct_external_deps(ctx)
     external_dep_files = filter_external_deps(external_deps, hxml["target"])
+    external_dep_files += runtime_deps
 
     create_build_hxml(ctx, toolchain, hxml, build_file, external_dep_files = external_dep_files)
 
@@ -277,7 +283,7 @@ def _haxe_test_impl(ctx):
         java_add_opens = ctx.attr.add_opens,
     )
 
-    rtrn_runfiles = ctx.files.srcs + ctx.files.resources + ctx.files.runtime_deps + toolchain.internal.tools + [dir, launcher_file]
+    rtrn_runfiles = ctx.files.srcs + ctx.files.resources + toolchain.internal.tools + runtime_deps + [dir, launcher_file]
 
     return [
         DefaultInfo(
